@@ -1,5 +1,6 @@
 export type TraceEvent = {
   request_id: string;
+  action?: string; // action type for model operations
   model_id?: string;
   chunk_count?: number;
   input_length?: number; // characters length only
@@ -16,6 +17,7 @@ export type TraceEvent = {
 export function logTrace(event: TraceEvent): void {
   const sanitized: TraceEvent = {
     request_id: event.request_id,
+    action: event.action,
     model_id: event.model_id,
     chunk_count: event.chunk_count,
     input_length: event.input_length,

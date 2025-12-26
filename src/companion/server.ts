@@ -1,6 +1,8 @@
 import http from 'http';
 import { Vault } from './vault';
 import { Anonymizer } from './anonymizer';
+import { ModelManager } from './model-manager';
+import { PilmaConfig, DEFAULT_CONFIG } from './config';
 
 /**
  * Companion service HTTP server.
@@ -12,18 +14,21 @@ export type ServerConfig = {
   port: number;
   host: string;
   secret: string;
+  pilmaConfig?: PilmaConfig;
 };
 
 export class CompanionServer {
   private server: http.Server | null = null;
   private vault: Vault;
   private anonymizer: Anonymizer;
+  private modelManager: ModelManager;
   private config: ServerConfig;
 
   constructor(config: ServerConfig) {
     this.config = config;
     this.vault = new Vault();
     this.anonymizer = new Anonymizer(this.vault);
+    this.modelManager = new ModelManager(config.pilmaConfig || DEFAULT_CONFIG);
   }
 
   /**
@@ -209,21 +214,47 @@ export class CompanionServer {
   }
 
   /**
-   * POST /model/warmup - Placeholder for PR2.
+   * POST /model/warmup - Download and prepare model for use.
    */
   private handleModelWarmup(req: http.IncomingMessage, res: http.ServerResponse): void {
-    this.readBody(req, () => {
+    this.readBody(req, async (body) => {
       if (!this.verifyAuth(req)) {
         res.writeHead(401, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Unauthorized' }));
         return;
       }
 
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({
-        status: 'placeholder',
-        message: 'Model warmup will be implemented in PR2',
-      }));
+      try {
+        const { modelId, locale } = JSON.parse(body || '{}');
+
+        if (!modelId) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Missing modelId' }));
+          return;
+        }
+
+        // Attempt to warmup the model
+        await this.modelManager.warmupModel(modelId);
+
+        const isCached = this.modelManager.isModelCached(modelId);
+        const isLoaded = this.modelManager.isModelLoaded(modelId);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          status: 'ok',
+          modelId,
+          locale: locale || 'unknown',
+          cached: isCached,
+          loaded: isLoaded,
+        }));
+      } catch (err) {
+        const error = err as Error;
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ 
+          error: 'Model warmup failed',
+          message: error.message,
+        }));
+      }
     });
   }
 
