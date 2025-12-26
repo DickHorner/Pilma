@@ -80,7 +80,8 @@ npm install
 npm test
 npm run dev
 Start companion service
-npm run companion```
+npm run companion
+```
 
 It prints:
 - service URL (default http://127.0.0.1:8787)
