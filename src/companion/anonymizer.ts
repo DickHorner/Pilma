@@ -47,7 +47,7 @@ export class Anonymizer {
    * Anonymize text by detecting and replacing PII with stable tokens.
    */
   anonymize(sessionId: string, text: string): AnonymizeResult {
-    const traceId = `trace-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const traceId = `trace-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     const startTime = Date.now();
 
     let obfuscatedText = text;
@@ -132,6 +132,6 @@ export class Anonymizer {
       hash = ((hash << 5) - hash) + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
-    return Math.abs(hash).toString(36).toUpperCase().substr(0, 4);
+    return Math.abs(hash).toString(36).toUpperCase().substring(0, 4);
   }
 }

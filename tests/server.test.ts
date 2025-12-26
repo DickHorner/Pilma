@@ -4,7 +4,7 @@ import { CompanionServer } from '../src/companion/server';
 
 describe('CompanionServer', () => {
   let server: CompanionServer;
-  let config = {
+  const config = {
     port: 8788,
     host: '127.0.0.1',
     secret: 'test-secret-123',
