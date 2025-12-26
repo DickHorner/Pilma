@@ -1,6 +1,6 @@
-# Pilm - the PII LLm Anonymizer — Local Identity Firewall
+# Pilma - the PII LLm Anonymizer — Local Identity Firewall
 
-Pilm is a **local-first PII anonymization tool** that can also run as a **localhost companion service** for a **Chrome/Firefox browser extension**.
+Pilma is a **local-first PII anonymization tool** that can also run as a **localhost companion service** for a **Chrome/Firefox browser extension**.
 
 The goal: **prevent sensitive data (PII) from ever reaching LLM chat platforms** by replacing it with robust placeholders *before* sending, then restoring it locally for the user.
 
