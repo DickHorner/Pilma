@@ -25,12 +25,6 @@ export function logTrace(event: TraceEvent): void {
     duration_ms: event.duration_ms,
   };
 
-  // Defensive: remove any accidental raw fields
-  const anyEvent = sanitized as unknown as Record<string, unknown>;
-  delete anyEvent.raw;
-  delete anyEvent.raw_text;
-  delete anyEvent.input_text;
-
   // Emit structured JSON only
   // Use console.log; in future we can wire to a proper logger/sink.
   console.log(JSON.stringify({ type: 'trace', payload: sanitized }));
