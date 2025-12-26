@@ -178,20 +178,23 @@ export class ModelManager {
     let currentPos = 0;
 
     while (currentPos < text.length) {
-      let endPos = currentPos + maxChars;
+      let endPos = Math.min(currentPos + maxChars, text.length);
       
       // Try to break at sentence boundaries if possible
       if (endPos < text.length) {
         // Look for sentence ending within last 20% of chunk
         const searchStart = endPos - Math.floor(maxChars * 0.2);
         const segment = text.substring(searchStart, endPos);
-        const sentenceEnd = segment.search(/[.!?]\s/);
+        // Match sentence ending: punctuation followed by whitespace or at boundary
+        const sentenceEnd = segment.search(/[.!?](?:\s|$)/);
         
         if (sentenceEnd !== -1) {
-          endPos = searchStart + sentenceEnd + 1;
+          // Include punctuation and any following space
+          endPos = searchStart + sentenceEnd + 2;
+          if (endPos > text.length) endPos = text.length;
         } else {
           // Fall back to word boundary
-          const lastSpace = text.lastIndexOf(' ', endPos);
+          const lastSpace = text.lastIndexOf(' ', endPos - 1);
           if (lastSpace > currentPos) {
             endPos = lastSpace + 1;
           }
