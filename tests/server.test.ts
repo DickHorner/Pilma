@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import http from 'http';
 import { CompanionServer } from '../src/companion/server';
+import { DEFAULT_CONFIG } from '../src/companion/config';
 
 describe('CompanionServer', () => {
   let server: CompanionServer;
@@ -8,6 +9,11 @@ describe('CompanionServer', () => {
     port: 8788,
     host: '127.0.0.1',
     secret: 'test-secret-123',
+    pilmaConfig: {
+      ...DEFAULT_CONFIG,
+      allowRemoteDownload: true, // Enable for tests
+      cacheDir: '/tmp/pilma-server-test-cache',
+    },
   };
 
   beforeEach(async () => {
@@ -206,7 +212,7 @@ describe('CompanionServer', () => {
       expect(body.error).toBe('Unauthorized');
     });
 
-    it('returns placeholder response', async () => {
+    it('returns error for missing modelId', async () => {
       const response = await makeRequest(
         'POST',
         '/model/warmup',
@@ -214,10 +220,26 @@ describe('CompanionServer', () => {
         { 'X-Pilma-Secret': config.secret }
       );
 
+      expect(response.status).toBe(400);
+      const body = JSON.parse(response.body);
+      expect(body.error).toContain('Missing modelId');
+    });
+
+    it('warms up model successfully', async () => {
+      const response = await makeRequest(
+        'POST',
+        '/model/warmup',
+        { modelId: 'iiiorg/piiranha-v1-detect-personal-information', locale: 'en' },
+        { 'X-Pilma-Secret': config.secret }
+      );
+
       expect(response.status).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.status).toBe('placeholder');
-      expect(body.message).toContain('PR2');
+      expect(body.status).toBe('ok');
+      expect(body.modelId).toBe('iiiorg/piiranha-v1-detect-personal-information');
+      expect(body.locale).toBe('en');
+      expect(body.cached).toBeDefined();
+      expect(body.loaded).toBeDefined();
     });
   });
 
