@@ -1,5 +1,9 @@
 # Pilma - the PII LLm Anonymizer — Local Identity Firewall
 
+## Status
+Baseline PR0 applied: docs (ARCHITECTURE.md, THREAT_MODEL.md, CONTRIBUTING.md), Node/TS lint/test/build scripts, and a PII-safe tracing skeleton.
+See ARCHITECTURE.md and THREAT_MODEL.md for details.
+
 Pilma is a **local-first PII anonymization tool** that can also run as a **localhost companion service** for a **Chrome/Firefox browser extension**.
 
 The goal: **prevent sensitive data (PII) from ever reaching LLM chat platforms** by replacing it with robust placeholders *before* sending, then restoring it locally for the user.
