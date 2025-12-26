@@ -49,7 +49,7 @@ Replace `YOUR_SECRET` with the secret printed when starting the service.
 ```bash
 curl -X POST http://127.0.0.1:8787/anonymize \
   -H "Content-Type: application/json" \
-  -H "X-A5-PII-Secret: YOUR_SECRET" \
+  -H "X-Pilma-Secret: YOUR_SECRET" \
   -d '{"sessionId":"demo-session","text":"Contact me at john@example.com or call 555-123-4567"}'
 ```
 
@@ -69,7 +69,7 @@ Use the obfuscated text from step 4:
 ```bash
 curl -X POST http://127.0.0.1:8787/deanonymize \
   -H "Content-Type: application/json" \
-  -H "X-A5-PII-Secret: YOUR_SECRET" \
+  -H "X-Pilma-Secret: YOUR_SECRET" \
   -d '{"sessionId":"demo-session","text":"Contact me at §§EMAIL_1~XXXX§§ or call §§PHONE_1~YYYY§§"}'
 ```
 
@@ -85,7 +85,7 @@ Expected response:
 ```bash
 curl -X POST http://127.0.0.1:8787/session/reset \
   -H "Content-Type: application/json" \
-  -H "X-A5-PII-Secret: YOUR_SECRET" \
+  -H "X-Pilma-Secret: YOUR_SECRET" \
   -d '{"sessionId":"demo-session"}'
 ```
 
@@ -101,7 +101,7 @@ After resetting, deanonymization will not restore PII (tokens remain as-is).
 ```bash
 curl -X POST http://127.0.0.1:8787/model/warmup \
   -H "Content-Type: application/json" \
-  -H "X-A5-PII-Secret: YOUR_SECRET" \
+  -H "X-Pilma-Secret: YOUR_SECRET" \
   -d '{}'
 ```
 
@@ -131,7 +131,7 @@ All tests should pass, including:
 
 2. **Localhost only**: The service binds to 127.0.0.1 by default.
 
-3. **Secret required**: All POST endpoints require the `X-A5-PII-Secret` header.
+3. **Secret required**: All POST endpoints require the `X-Pilma-Secret` header.
 
 4. **In-memory vault**: PII mappings are stored in memory only, never persisted to disk.
 
@@ -155,7 +155,7 @@ SECRET="test-secret-123"
 # Anonymize
 RESPONSE=$(curl -s -X POST http://127.0.0.1:8787/anonymize \
   -H "Content-Type: application/json" \
-  -H "X-A5-PII-Secret: $SECRET" \
+  -H "X-Pilma-Secret: $SECRET" \
   -d '{"sessionId":"test","text":"Email: user@example.com, Phone: 555-123-4567"}')
 
 echo "Anonymized: $(echo $RESPONSE | jq -r '.text')"
@@ -165,7 +165,7 @@ echo "Anonymized: $(echo $RESPONSE | jq -r '.text')"
 OBFUSCATED=$(echo $RESPONSE | jq -r '.text')
 curl -s -X POST http://127.0.0.1:8787/deanonymize \
   -H "Content-Type: application/json" \
-  -H "X-A5-PII-Secret: $SECRET" \
+  -H "X-Pilma-Secret: $SECRET" \
   -d "{\"sessionId\":\"test\",\"text\":\"$OBFUSCATED\"}" | jq -r '.text'
 # Output: Email: user@example.com, Phone: 555-123-4567
 ```

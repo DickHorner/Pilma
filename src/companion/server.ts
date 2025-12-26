@@ -68,7 +68,7 @@ export class CompanionServer {
     // CORS headers for local development
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-A5-PII-Secret');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Pilma-Secret');
 
     if (req.method === 'OPTIONS') {
       res.writeHead(200);
@@ -99,7 +99,7 @@ export class CompanionServer {
    * Verify shared secret header.
    */
   private verifyAuth(req: http.IncomingMessage): boolean {
-    const secret = req.headers['x-a5-pii-secret'];
+    const secret = req.headers['x-pilma-secret'];
     return secret === this.config.secret;
   }
 

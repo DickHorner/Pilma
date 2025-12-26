@@ -20,7 +20,7 @@ The goal: **prevent sensitive data (PII) from ever reaching LLM chat platforms**
 
 ## Why “model download per locale”?
 
-To keep installers/extensions lightweight (and to respect model licensing), A5 does **not** bundle large model weights.
+To keep installers/extensions lightweight (and to respect model licensing), Pilma does **not** bundle large model weights.
 Users choose the best model for their locale and download it locally.
 
 ## High-level architecture
@@ -31,7 +31,7 @@ Users choose the best model for their locale and download it locally.
 - Sends only obfuscated text to the website
 - Watches assistant output and calls `POST /deanonymize` before display
 
-2) **A5 Companion Service (localhost)**
+2) **Pilma Companion Service (localhost)**
 - Loads the configured model from local cache
 - Detects PII spans and replaces them with tokens
 - Restores tokens using an in-memory vault (scoped by session)
@@ -43,7 +43,7 @@ Users choose the best model for their locale and download it locally.
 
 ## Privacy & threat model (short)
 
-- A5 keeps PII local. The website receives only tokens.
+- Pilma keeps PII local. The website receives only tokens.
 - The browser extension can either:
   - **replace tokens in the DOM** (convenient but less private), or
   - **use a “reveal overlay”** (recommended hardening) so the page never sees restored PII in its DOM.
@@ -65,7 +65,7 @@ Typical endpoints:
   - clears the in-memory vault for that session
 
 All POST requests require a header like:
-- `X-A5-PII-Secret: <shared-secret>`
+- `X-Pilma-Secret: <shared-secret>`
 
 ## Model support
 

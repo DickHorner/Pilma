@@ -50,7 +50,7 @@ describe('CompanionServer', () => {
           sessionId: 'session-1',
           text: 'Email: user@example.com',
         },
-        { 'X-A5-PII-Secret': config.secret }
+        { 'X-Pilma-Secret': config.secret }
       );
 
       expect(response.status).toBe(200);
@@ -66,7 +66,7 @@ describe('CompanionServer', () => {
         'POST',
         '/anonymize',
         { text: 'Email: user@example.com' },
-        { 'X-A5-PII-Secret': config.secret }
+        { 'X-Pilma-Secret': config.secret }
       );
 
       expect(response.status).toBe(400);
@@ -79,7 +79,7 @@ describe('CompanionServer', () => {
         'POST',
         '/anonymize',
         { sessionId: 'session-1' },
-        { 'X-A5-PII-Secret': config.secret }
+        { 'X-Pilma-Secret': config.secret }
       );
 
       expect(response.status).toBe(400);
@@ -109,7 +109,7 @@ describe('CompanionServer', () => {
           sessionId: 'session-1',
           text: 'Email: user@example.com',
         },
-        { 'X-A5-PII-Secret': config.secret }
+        { 'X-Pilma-Secret': config.secret }
       );
 
       const anonymizeBody = JSON.parse(anonymizeResponse.body);
@@ -122,7 +122,7 @@ describe('CompanionServer', () => {
           sessionId: 'session-1',
           text: anonymizeBody.text,
         },
-        { 'X-A5-PII-Secret': config.secret }
+        { 'X-Pilma-Secret': config.secret }
       );
 
       expect(deanonymizeResponse.status).toBe(200);
@@ -135,7 +135,7 @@ describe('CompanionServer', () => {
         'POST',
         '/deanonymize',
         { text: '§§EMAIL_1~ABCD§§' },
-        { 'X-A5-PII-Secret': config.secret }
+        { 'X-Pilma-Secret': config.secret }
       );
 
       expect(response.status).toBe(400);
@@ -164,7 +164,7 @@ describe('CompanionServer', () => {
           sessionId: 'session-1',
           text: 'Email: user@example.com',
         },
-        { 'X-A5-PII-Secret': config.secret }
+        { 'X-Pilma-Secret': config.secret }
       );
 
       const anonymizeBody = JSON.parse(anonymizeResponse.body);
@@ -174,7 +174,7 @@ describe('CompanionServer', () => {
         'POST',
         '/session/reset',
         { sessionId: 'session-1' },
-        { 'X-A5-PII-Secret': config.secret }
+        { 'X-Pilma-Secret': config.secret }
       );
 
       expect(resetResponse.status).toBe(200);
@@ -189,7 +189,7 @@ describe('CompanionServer', () => {
           sessionId: 'session-1',
           text: anonymizeBody.text,
         },
-        { 'X-A5-PII-Secret': config.secret }
+        { 'X-Pilma-Secret': config.secret }
       );
 
       const deanonymizeBody = JSON.parse(deanonymizeResponse.body);
@@ -211,7 +211,7 @@ describe('CompanionServer', () => {
         'POST',
         '/model/warmup',
         {},
-        { 'X-A5-PII-Secret': config.secret }
+        { 'X-Pilma-Secret': config.secret }
       );
 
       expect(response.status).toBe(200);
@@ -230,7 +230,7 @@ describe('CompanionServer', () => {
         'POST',
         '/anonymize',
         { sessionId: 'session-1', text: originalText },
-        { 'X-A5-PII-Secret': config.secret }
+        { 'X-Pilma-Secret': config.secret }
       );
 
       const anonymizeBody = JSON.parse(anonymizeResponse.body);
@@ -242,7 +242,7 @@ describe('CompanionServer', () => {
         'POST',
         '/deanonymize',
         { sessionId: 'session-1', text: anonymizeBody.text },
-        { 'X-A5-PII-Secret': config.secret }
+        { 'X-Pilma-Secret': config.secret }
       );
 
       const deanonymizeBody = JSON.parse(deanonymizeResponse.body);
