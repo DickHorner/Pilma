@@ -261,14 +261,20 @@ export class CompanionServer {
   /**
    * Read request body.
    */
-  private readBody(req: http.IncomingMessage, callback: (body: string) => void): void {
+  private readBody(req: http.IncomingMessage, callback: (body: string) => void | Promise<void>): void {
     let body = '';
     req.setEncoding('utf8');
     req.on('data', (chunk) => {
       body += chunk.toString();
     });
     req.on('end', () => {
-      callback(body);
+      // Handle both sync and async callbacks
+      const result = callback(body);
+      if (result instanceof Promise) {
+        result.catch((err) => {
+          console.error('Error in async request handler:', err);
+        });
+      }
     });
     req.on('error', (err) => {
       console.error('Error reading request body:', err);

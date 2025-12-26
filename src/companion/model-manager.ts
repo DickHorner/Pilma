@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { ModelConfig, PilmaConfig } from './config';
+import { ModelConfig, PilmaConfig, validateConfig } from './config';
 import { logTrace } from '../tracing/trace';
 
 /**
@@ -22,10 +22,15 @@ export type ChunkResult = {
 export class ModelManager {
   private config: PilmaConfig;
   private loadedModels: Map<string, boolean>; // modelId -> loaded status
+  private downloadingModels: Set<string>; // Track models being downloaded
 
   constructor(config: PilmaConfig) {
+    // Validate config at construction time
+    validateConfig(config);
+    
     this.config = config;
     this.loadedModels = new Map();
+    this.downloadingModels = new Set();
     this.ensureCacheDir();
   }
 
@@ -65,40 +70,52 @@ export class ModelManager {
       throw new Error('Remote download is not enabled. Set allowRemoteDownload to true in config.');
     }
 
-    const traceId = `download-${Date.now()}`;
-    const startTime = Date.now();
-
-    logTrace({
-      request_id: traceId,
-      action: 'model_download_start',
-      model_id: modelId,
-      started_at: startTime,
-    });
-
-    // Create model directory
-    const modelPath = this.getModelPath(modelId);
-    if (!fs.existsSync(modelPath)) {
-      fs.mkdirSync(modelPath, { recursive: true });
+    // Prevent concurrent downloads of the same model
+    if (this.downloadingModels.has(modelId)) {
+      throw new Error(`Model ${modelId} is already being downloaded. Please wait.`);
     }
 
-    // For PR2: Create a marker file indicating the model is "downloaded"
-    // Real implementation would download from HuggingFace API
-    const markerPath = path.join(modelPath, 'model.marker');
-    fs.writeFileSync(markerPath, JSON.stringify({
-      modelId,
-      downloadedAt: new Date().toISOString(),
-      source: 'stub',
-    }), 'utf8');
+    this.downloadingModels.add(modelId);
 
-    const finishTime = Date.now();
+    try {
+      const traceId = `download-${Date.now()}`;
+      const startTime = Date.now();
 
-    logTrace({
-      request_id: traceId,
-      action: 'model_download_complete',
-      model_id: modelId,
-      finished_at: finishTime,
-      duration_ms: finishTime - startTime,
-    });
+      logTrace({
+        request_id: traceId,
+        action: 'model_download_start',
+        model_id: modelId,
+        started_at: startTime,
+      });
+
+      // Create model directory
+      const modelPath = this.getModelPath(modelId);
+      if (!fs.existsSync(modelPath)) {
+        fs.mkdirSync(modelPath, { recursive: true });
+      }
+
+      // For PR2: Create a marker file indicating the model is "downloaded"
+      // Real implementation would download from HuggingFace API
+      const markerPath = path.join(modelPath, 'model.marker');
+      fs.writeFileSync(markerPath, JSON.stringify({
+        modelId,
+        downloadedAt: new Date().toISOString(),
+        source: 'stub',
+      }), 'utf8');
+
+      const finishTime = Date.now();
+
+      logTrace({
+        request_id: traceId,
+        action: 'model_download_complete',
+        model_id: modelId,
+        finished_at: finishTime,
+        duration_ms: finishTime - startTime,
+      });
+    } finally {
+      // Always remove from downloading set, even if download fails
+      this.downloadingModels.delete(modelId);
+    }
   }
 
   /**
