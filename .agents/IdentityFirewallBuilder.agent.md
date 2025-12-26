@@ -43,7 +43,7 @@ PR0: Repo baseline
 
 PR1: Companion service skeleton
 - Implement endpoints + secret auth + vault in memory
-- Minimal anonymize/deanonymize logic using existing A5 core
+- Minimal anonymize/deanonymize logic using existing Pilma core
 - Unit tests for roundtrip and auth failure
 
 PR2: Model manager

@@ -1,4 +1,4 @@
-You are working in the A5-PII-Anonymizer repository.
+You are working in the Pilma repository.
 
 Working style:
 - Make small, reviewable PRs.
