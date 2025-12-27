@@ -206,18 +206,20 @@ describe('CompanionServer', () => {
       expect(body.error).toBe('Unauthorized');
     });
 
-    it('returns placeholder response', async () => {
+    it('warms up model with modelId', async () => {
       const response = await makeRequest(
         'POST',
         '/model/warmup',
-        {},
+        { modelId: 'iiiorg/piiranha-v1-detect-personal-information' },
         { 'X-Pilma-Secret': config.secret }
       );
 
       expect(response.status).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.status).toBe('placeholder');
-      expect(body.message).toContain('PR2');
+      expect(body.status).toBe('ok');
+      expect(body.modelId).toBe('iiiorg/piiranha-v1-detect-personal-information');
+      expect(body.cached).toBe(true);
+      expect(body.loaded).toBe(true);
     });
   });
 

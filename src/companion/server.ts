@@ -1,6 +1,8 @@
 import http from 'http';
 import { Vault } from './vault';
 import { Anonymizer } from './anonymizer';
+import { ModelManager } from './model-manager';
+import { PilmaConfig, DEFAULT_CONFIG } from './config';
 
 /**
  * Companion service HTTP server.
@@ -12,18 +14,21 @@ export type ServerConfig = {
   port: number;
   host: string;
   secret: string;
+  pilmaConfig?: PilmaConfig;
 };
 
 export class CompanionServer {
   private server: http.Server | null = null;
   private vault: Vault;
   private anonymizer: Anonymizer;
+  private modelManager: ModelManager;
   private config: ServerConfig;
 
   constructor(config: ServerConfig) {
     this.config = config;
     this.vault = new Vault();
     this.anonymizer = new Anonymizer(this.vault);
+    this.modelManager = new ModelManager(config.pilmaConfig || DEFAULT_CONFIG);
   }
 
   /**
@@ -209,39 +214,80 @@ export class CompanionServer {
   }
 
   /**
-   * POST /model/warmup - Placeholder for PR2.
+   * Download and load model.
    */
   private handleModelWarmup(req: http.IncomingMessage, res: http.ServerResponse): void {
-    this.readBody(req, () => {
+    this.readBody(req, async (body) => {
       if (!this.verifyAuth(req)) {
         res.writeHead(401, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Unauthorized' }));
         return;
       }
 
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({
-        status: 'placeholder',
-        message: 'Model warmup will be implemented in PR2',
-      }));
+      try {
+        const { modelId, locale } = JSON.parse(body);
+
+        let targetModelId = modelId;
+
+        // If locale provided but not modelId, use first model for locale
+        if (!targetModelId && locale) {
+          const modelsForLocale = this.modelManager.getModelsForLocale(locale);
+          if (modelsForLocale.length === 0) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: `No models configured for locale "${locale}"` }));
+            return;
+          }
+          targetModelId = modelsForLocale[0];
+        }
+
+        if (!targetModelId) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Missing modelId or locale' }));
+          return;
+        }
+
+        const cached = this.modelManager.isModelCached(targetModelId);
+        const loaded = this.modelManager.isModelLoaded(targetModelId);
+
+        if (!cached || !loaded) {
+          await this.modelManager.warmup(targetModelId);
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            status: 'ok',
+            modelId: targetModelId,
+            cached: this.modelManager.isModelCached(targetModelId),
+            loaded: this.modelManager.isModelLoaded(targetModelId),
+          })
+        );
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            error: 'Internal server error',
+            message: err instanceof Error ? err.message : 'Unknown error',
+          })
+        );
+      }
     });
   }
 
   /**
    * Read request body.
    */
-  private readBody(req: http.IncomingMessage, callback: (body: string) => void): void {
+  private readBody(
+    req: http.IncomingMessage,
+    callback: (body: string) => void | Promise<void>
+  ): void {
     let body = '';
     req.setEncoding('utf8');
     req.on('data', (chunk) => {
       body += chunk.toString();
     });
-    req.on('end', () => {
-      callback(body);
-    });
-    req.on('error', (err) => {
-      console.error('Error reading request body:', err);
-      callback('');
+    req.on('end', async () => {
+      await callback(body);
     });
   }
 }

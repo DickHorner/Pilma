@@ -4,6 +4,7 @@ export type TraceEvent = {
   chunk_count?: number;
   input_length?: number; // characters length only
   category_counts?: Record<string, number>; // e.g., { name: 2, email: 1 }
+  action?: string; // e.g., download_start, warmup_complete, load_start
   started_at?: number; // ms epoch
   finished_at?: number; // ms epoch
   duration_ms?: number;
@@ -20,6 +21,7 @@ export function logTrace(event: TraceEvent): void {
     chunk_count: event.chunk_count,
     input_length: event.input_length,
     category_counts: event.category_counts ?? {},
+    action: event.action,
     started_at: event.started_at,
     finished_at: event.finished_at,
     duration_ms: event.duration_ms,
