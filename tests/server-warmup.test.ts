@@ -4,7 +4,7 @@ import fs from 'fs';
 import { CompanionServer } from '../src/companion/server';
 import { PilmaConfig } from '../src/companion/config';
 
-const TEST_PORT = 8788;
+const TEST_PORT = 8789;
 const TEST_HOST = '127.0.0.1';
 const TEST_SECRET = 'test-secret-key';
 const TEST_CACHE_DIR = '.pilma/test-server-cache';
@@ -62,8 +62,10 @@ describe('server model warmup integration', () => {
         method,
         headers: {
           'Content-Type': 'application/json',
+          'Connection': 'close',
           ...headers,
         },
+        agent: false,
       };
 
       const req = http.request(options, (res) => {

@@ -18,6 +18,8 @@ export type ServerConfig = {
 };
 
 export class CompanionServer {
+  private static readonly JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8' };
+  private static readonly MAX_BODY_BYTES = 1024 * 1024;
   private server: http.Server | null = null;
   private vault: Vault;
   private anonymizer: Anonymizer;
@@ -35,16 +37,32 @@ export class CompanionServer {
    * Start the HTTP server.
    */
   start(): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       this.server = http.createServer((req, res) => {
-        this.handleRequest(req, res);
+        void this.handleRequest(req, res).catch((err) => {
+          if (!res.headersSent) {
+            this.writeJson(res, 500, { error: 'Internal server error' });
+          }
+          if (err instanceof Error) {
+            console.error('Unhandled request error:', err.message);
+          }
+        });
       });
 
-      this.server.listen(this.config.port, this.config.host, () => {
-        console.log(`Companion service running at http://${this.config.host}:${this.config.port}`);
-        console.log(`Shared secret: ${this.config.secret}`);
+      const handleError = (err: Error) => {
+        this.server?.off('listening', handleListening);
+        reject(err);
+      };
+
+      const handleListening = () => {
+        this.server?.off('error', handleError);
+        console.log(`Companion service running at http://${this.config.host}:${this.getPort()}`);
         resolve();
-      });
+      };
+
+      this.server.once('error', handleError);
+      this.server.once('listening', handleListening);
+      this.server.listen(this.config.port, this.config.host);
     });
   }
 
@@ -54,9 +72,9 @@ export class CompanionServer {
   stop(): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.server) {
-        // Close all existing connections
-        this.server.closeAllConnections?.(); // Node 18.2+
-        this.server.close((err) => {
+        const activeServer = this.server;
+        this.server = null;
+        activeServer.close((err) => {
           if (err) reject(err);
           else resolve();
         });
@@ -69,14 +87,16 @@ export class CompanionServer {
   /**
    * Handle incoming HTTP requests.
    */
-  private handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
-    // CORS headers for local development
-    res.setHeader('Access-Control-Allow-Origin', '*');
+  private async handleRequest(
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ): Promise<void> {
+    this.applyCorsHeaders(req, res);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Pilma-Secret');
 
     if (req.method === 'OPTIONS') {
-      res.writeHead(200);
+      res.writeHead(204);
       res.end();
       return;
     }
@@ -85,18 +105,17 @@ export class CompanionServer {
     const url = req.url || '';
 
     if (req.method === 'GET' && url === '/health') {
-      this.handleHealth(req, res);
+      this.handleHealth(res);
     } else if (req.method === 'POST' && url === '/anonymize') {
-      this.handleAnonymize(req, res);
+      await this.handleAnonymize(req, res);
     } else if (req.method === 'POST' && url === '/deanonymize') {
-      this.handleDeanonymize(req, res);
+      await this.handleDeanonymize(req, res);
     } else if (req.method === 'POST' && url === '/session/reset') {
-      this.handleSessionReset(req, res);
+      await this.handleSessionReset(req, res);
     } else if (req.method === 'POST' && url === '/model/warmup') {
-      this.handleModelWarmup(req, res);
+      await this.handleModelWarmup(req, res);
     } else {
-      res.writeHead(404, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Not found' }));
+      this.writeJson(res, 404, { error: 'Not found' });
     }
   }
 
@@ -105,189 +124,288 @@ export class CompanionServer {
    */
   private verifyAuth(req: http.IncomingMessage): boolean {
     const secret = req.headers['x-pilma-secret'];
+    if (Array.isArray(secret)) {
+      return secret.includes(this.config.secret);
+    }
     return secret === this.config.secret;
   }
 
   /**
    * GET /health - Service health check.
    */
-  private handleHealth(req: http.IncomingMessage, res: http.ServerResponse): void {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
+  private handleHealth(res: http.ServerResponse): void {
+    this.writeJson(res, 200, {
       status: 'ok',
       sessions: this.vault.getSessionCount(),
-    }));
+    });
   }
 
   /**
    * POST /anonymize - Obfuscate PII in text.
    */
-  private handleAnonymize(req: http.IncomingMessage, res: http.ServerResponse): void {
-    this.readBody(req, (body) => {
-      if (!this.verifyAuth(req)) {
-        res.writeHead(401, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Unauthorized' }));
+  private async handleAnonymize(
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ): Promise<void> {
+    if (!this.verifyAuth(req)) {
+      this.drainRequest(req);
+      this.writeJson(res, 401, { error: 'Unauthorized' });
+      return;
+    }
+
+    try {
+      const { sessionId, text } = await this.readJsonBody(req);
+
+      if (!this.isNonEmptyString(sessionId)) {
+        this.writeJson(res, 400, { error: 'Missing sessionId' });
         return;
       }
 
-      try {
-        const { sessionId, text } = JSON.parse(body);
-
-        if (!sessionId || !text) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Missing sessionId or text' }));
-          return;
-        }
-
-        const result = this.anonymizer.anonymize(sessionId, text);
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(result));
-      } catch (err) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Internal server error' }));
+      if (typeof text !== 'string') {
+        this.writeJson(res, 400, { error: 'Missing text' });
+        return;
       }
-    });
+
+      const result = this.anonymizer.anonymize(sessionId, text);
+      this.writeJson(res, 200, result);
+    } catch (err) {
+      this.handleRouteError(res, err);
+    }
   }
 
   /**
    * POST /deanonymize - Restore obfuscated text.
    */
-  private handleDeanonymize(req: http.IncomingMessage, res: http.ServerResponse): void {
-    this.readBody(req, (body) => {
-      if (!this.verifyAuth(req)) {
-        res.writeHead(401, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Unauthorized' }));
+  private async handleDeanonymize(
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ): Promise<void> {
+    if (!this.verifyAuth(req)) {
+      this.drainRequest(req);
+      this.writeJson(res, 401, { error: 'Unauthorized' });
+      return;
+    }
+
+    try {
+      const { sessionId, text } = await this.readJsonBody(req);
+
+      if (!this.isNonEmptyString(sessionId)) {
+        this.writeJson(res, 400, { error: 'Missing sessionId' });
         return;
       }
 
-      try {
-        const parsed = body ? JSON.parse(body) : {};
-        const { sessionId, text } = parsed;
-
-        if (!sessionId || !text) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Missing sessionId or text' }));
-          return;
-        }
-
-        const result = this.anonymizer.deanonymize(sessionId, text);
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(result));
-      } catch (err) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Internal server error' }));
+      if (typeof text !== 'string') {
+        this.writeJson(res, 400, { error: 'Missing text' });
+        return;
       }
-    });
+
+      const result = this.anonymizer.deanonymize(sessionId, text);
+      this.writeJson(res, 200, result);
+    } catch (err) {
+      this.handleRouteError(res, err);
+    }
   }
 
   /**
    * POST /session/reset - Clear session vault.
    */
-  private handleSessionReset(req: http.IncomingMessage, res: http.ServerResponse): void {
-    this.readBody(req, (body) => {
-      if (!this.verifyAuth(req)) {
-        res.writeHead(401, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Unauthorized' }));
+  private async handleSessionReset(
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ): Promise<void> {
+    if (!this.verifyAuth(req)) {
+      this.drainRequest(req);
+      this.writeJson(res, 401, { error: 'Unauthorized' });
+      return;
+    }
+
+    try {
+      const { sessionId } = await this.readJsonBody(req);
+
+      if (!this.isNonEmptyString(sessionId)) {
+        this.writeJson(res, 400, { error: 'Missing sessionId' });
         return;
       }
 
-      try {
-        const { sessionId } = JSON.parse(body);
-
-        if (!sessionId) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Missing sessionId' }));
-          return;
-        }
-
-        this.vault.clearSession(sessionId);
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ status: 'ok' }));
-      } catch (err) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Internal server error' }));
-      }
-    });
+      this.vault.clearSession(sessionId);
+      this.writeJson(res, 200, { status: 'ok' });
+    } catch (err) {
+      this.handleRouteError(res, err);
+    }
   }
 
   /**
    * Download and load model.
    */
-  private handleModelWarmup(req: http.IncomingMessage, res: http.ServerResponse): void {
-    this.readBody(req, async (body) => {
-      if (!this.verifyAuth(req)) {
-        res.writeHead(401, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Unauthorized' }));
+  private async handleModelWarmup(
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ): Promise<void> {
+    if (!this.verifyAuth(req)) {
+      this.drainRequest(req);
+      this.writeJson(res, 401, { error: 'Unauthorized' });
+      return;
+    }
+
+    try {
+      const { modelId, locale } = await this.readJsonBody(req);
+      const parsedModelId = typeof modelId === 'string' ? modelId : undefined;
+      const parsedLocale = typeof locale === 'string' ? locale : undefined;
+
+      let targetModelId = parsedModelId;
+
+      if (!targetModelId && parsedLocale) {
+        const modelsForLocale = this.modelManager.getModelsForLocale(parsedLocale);
+        if (modelsForLocale.length === 0) {
+          this.writeJson(res, 400, { error: `No models configured for locale "${parsedLocale}"` });
+          return;
+        }
+        targetModelId = modelsForLocale[0];
+      }
+
+      if (!targetModelId) {
+        this.writeJson(res, 400, { error: 'Missing modelId or locale' });
         return;
       }
 
-      try {
-        const { modelId, locale } = JSON.parse(body);
+      const cached = this.modelManager.isModelCached(targetModelId);
+      const loaded = this.modelManager.isModelLoaded(targetModelId);
 
-        let targetModelId = modelId;
-
-        // If locale provided but not modelId, use first model for locale
-        if (!targetModelId && locale) {
-          const modelsForLocale = this.modelManager.getModelsForLocale(locale);
-          if (modelsForLocale.length === 0) {
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: `No models configured for locale "${locale}"` }));
-            return;
-          }
-          targetModelId = modelsForLocale[0];
-        }
-
-        if (!targetModelId) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Missing modelId or locale' }));
-          return;
-        }
-
-        const cached = this.modelManager.isModelCached(targetModelId);
-        const loaded = this.modelManager.isModelLoaded(targetModelId);
-
-        if (!cached || !loaded) {
-          await this.modelManager.warmup(targetModelId);
-        }
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(
-          JSON.stringify({
-            status: 'ok',
-            modelId: targetModelId,
-            cached: this.modelManager.isModelCached(targetModelId),
-            loaded: this.modelManager.isModelLoaded(targetModelId),
-          })
-        );
-      } catch (err) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(
-          JSON.stringify({
-            error: 'Internal server error',
-            message: err instanceof Error ? err.message : 'Unknown error',
-          })
-        );
+      if (!cached || !loaded) {
+        await this.modelManager.warmup(targetModelId);
       }
-    });
+
+      this.writeJson(res, 200, {
+        status: 'ok',
+        modelId: targetModelId,
+        cached: this.modelManager.isModelCached(targetModelId),
+        loaded: this.modelManager.isModelLoaded(targetModelId),
+      });
+    } catch (err) {
+      if (err instanceof HttpError) {
+        this.handleRouteError(res, err);
+        return;
+      }
+
+      this.writeJson(res, 500, {
+        error: 'Internal server error',
+        message: err instanceof Error ? err.message : 'Unknown error',
+      });
+    }
   }
 
   /**
    * Read request body.
    */
-  private readBody(
-    req: http.IncomingMessage,
-    callback: (body: string) => void | Promise<void>
-  ): void {
-    let body = '';
-    req.setEncoding('utf8');
-    req.on('data', (chunk) => {
-      body += chunk.toString();
+  private async readJsonBody(req: http.IncomingMessage): Promise<Record<string, unknown>> {
+    const rawBody = await this.readBody(req);
+    if (rawBody.length === 0) {
+      return {};
+    }
+
+    try {
+      const parsed = JSON.parse(rawBody);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new HttpError(400, 'Request body must be a JSON object');
+      }
+      return parsed as Record<string, unknown>;
+    } catch (err) {
+      if (err instanceof HttpError) {
+        throw err;
+      }
+      throw new HttpError(400, 'Invalid JSON request body');
+    }
+  }
+
+  private readBody(req: http.IncomingMessage): Promise<string> {
+    return new Promise((resolve, reject) => {
+      let body = '';
+      let bodyBytes = 0;
+      let settled = false;
+
+      req.setEncoding('utf8');
+      req.on('data', (chunk: string) => {
+        if (settled) {
+          return;
+        }
+
+        bodyBytes += Buffer.byteLength(chunk, 'utf8');
+        if (bodyBytes > CompanionServer.MAX_BODY_BYTES) {
+          settled = true;
+          this.drainRequest(req);
+          reject(new HttpError(413, 'Request body too large'));
+          return;
+        }
+
+        body += chunk;
+      });
+      req.on('end', () => {
+        if (!settled) {
+          settled = true;
+          resolve(body);
+        }
+      });
+      req.on('error', (err) => {
+        if (!settled) {
+          settled = true;
+          reject(err);
+        }
+      });
     });
-    req.on('end', async () => {
-      await callback(body);
-    });
+  }
+
+  private applyCorsHeaders(req: http.IncomingMessage, res: http.ServerResponse): void {
+    const origin = req.headers.origin;
+    if (typeof origin === 'string' && this.isAllowedOrigin(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    }
+  }
+
+  private isAllowedOrigin(origin: string): boolean {
+    return (
+      /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin) ||
+      origin.startsWith('chrome-extension://') ||
+      origin.startsWith('moz-extension://')
+    );
+  }
+
+  private handleRouteError(res: http.ServerResponse, err: unknown): void {
+    if (err instanceof HttpError) {
+      this.writeJson(res, err.statusCode, { error: err.message });
+      return;
+    }
+
+    this.writeJson(res, 500, { error: 'Internal server error' });
+  }
+
+  private writeJson(res: http.ServerResponse, statusCode: number, payload: object): void {
+    res.writeHead(statusCode, CompanionServer.JSON_HEADERS);
+    res.end(JSON.stringify(payload));
+  }
+
+  private drainRequest(req: http.IncomingMessage): void {
+    req.resume();
+  }
+
+  private isNonEmptyString(value: unknown): value is string {
+    return typeof value === 'string' && value.trim().length > 0;
+  }
+
+  private getPort(): number {
+    const address = this.server?.address();
+    if (address && typeof address === 'object') {
+      return address.port;
+    }
+    return this.config.port;
+  }
+}
+
+class HttpError extends Error {
+  readonly statusCode: number;
+
+  constructor(statusCode: number, message: string) {
+    super(message);
+    this.statusCode = statusCode;
   }
 }

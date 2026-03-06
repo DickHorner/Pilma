@@ -86,6 +86,18 @@ describe('Anonymizer', () => {
       const retrieved = vault.retrieve(sessionId, token);
       expect(retrieved).toBe('user@example.com');
     });
+
+    it('reuses the same token for repeated values in a session', () => {
+      const sessionId = 'session-1';
+      const text = 'Email user@example.com and again user@example.com';
+
+      const result = anonymizer.anonymize(sessionId, text);
+      const matches = result.text.match(/§§EMAIL_1~[A-Z0-9]+§§/g);
+
+      expect(matches).toHaveLength(2);
+      expect(matches?.[0]).toBe(matches?.[1]);
+      expect(result.counts.EMAIL).toBe(2);
+    });
   });
 
   describe('deanonymize', () => {

@@ -1,190 +1,122 @@
-# PR1: Companion Service Testing Guide
+# PR1 Testing Guide
 
-## Overview
-PR1 implements the companion service skeleton with:
-- HTTP endpoints for anonymization/deanonymization
-- Secret header authentication
-- In-memory vault for PII mappings
-- Minimal PII detection using regex patterns (PR2 will add model-based detection)
+## Automated Checks
 
-## How to Test
-
-### 1. Start the Companion Service
+Run the full local gate set:
 
 ```bash
 npm install
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
+## Manual Smoke Test
+
+Start the service:
+
+```bash
 npm run companion
 ```
 
-The service will start on `http://127.0.0.1:8787` and print a generated shared secret.
+The service prints the localhost URL and the generated secret.
 
-### 2. Test Health Endpoint (No Auth Required)
+### 1. Health
 
 ```bash
 curl http://127.0.0.1:8787/health
 ```
 
 Expected response:
+
 ```json
 {"status":"ok","sessions":0}
 ```
 
-### 3. Test Authentication Failure
+### 2. Unauthorized request
 
 ```bash
-curl -X POST http://127.0.0.1:8787/anonymize \
-  -H "Content-Type: application/json" \
-  -d '{"sessionId":"test","text":"Email: user@example.com"}'
+curl -X POST http://127.0.0.1:8787/anonymize ^
+  -H "Content-Type: application/json" ^
+  -d "{\"sessionId\":\"demo\",\"text\":\"Email user@example.com\"}"
 ```
 
 Expected response:
+
 ```json
 {"error":"Unauthorized"}
 ```
 
-### 4. Test Anonymization (With Auth)
-
-Replace `YOUR_SECRET` with the secret printed when starting the service.
+### 3. Anonymize
 
 ```bash
-curl -X POST http://127.0.0.1:8787/anonymize \
-  -H "Content-Type: application/json" \
-  -H "X-Pilma-Secret: YOUR_SECRET" \
-  -d '{"sessionId":"demo-session","text":"Contact me at john@example.com or call 555-123-4567"}'
+curl -X POST http://127.0.0.1:8787/anonymize ^
+  -H "Content-Type: application/json" ^
+  -H "X-Pilma-Secret: YOUR_SECRET" ^
+  -d "{\"sessionId\":\"demo\",\"text\":\"Contact user@example.com or call 123-456-7890\"}"
 ```
 
-Expected response:
+Expected response shape:
+
 ```json
 {
-  "text": "Contact me at §§EMAIL_1~XXXX§§ or call §§PHONE_1~YYYY§§",
-  "counts": {"EMAIL": 1, "PHONE": 1},
+  "text": "Contact §§EMAIL_1~...§§ or call §§PHONE_1~...§§",
+  "counts": { "EMAIL": 1, "PHONE": 1 },
   "traceId": "trace-..."
 }
 ```
 
-### 5. Test Deanonymization
-
-Use the obfuscated text from step 4:
+### 4. Deanonymize
 
 ```bash
-curl -X POST http://127.0.0.1:8787/deanonymize \
-  -H "Content-Type: application/json" \
-  -H "X-Pilma-Secret: YOUR_SECRET" \
-  -d '{"sessionId":"demo-session","text":"Contact me at §§EMAIL_1~XXXX§§ or call §§PHONE_1~YYYY§§"}'
+curl -X POST http://127.0.0.1:8787/deanonymize ^
+  -H "Content-Type: application/json" ^
+  -H "X-Pilma-Secret: YOUR_SECRET" ^
+  -d "{\"sessionId\":\"demo\",\"text\":\"Contact §§EMAIL_1~...§§ or call §§PHONE_1~...§§\"}"
 ```
 
-Expected response:
+Expected response shape:
+
 ```json
-{
-  "text": "Contact me at john@example.com or call 555-123-4567"
-}
+{ "text": "Contact user@example.com or call 123-456-7890" }
 ```
 
-### 6. Test Session Reset
+### 5. Reset session
 
 ```bash
-curl -X POST http://127.0.0.1:8787/session/reset \
-  -H "Content-Type: application/json" \
-  -H "X-Pilma-Secret: YOUR_SECRET" \
-  -d '{"sessionId":"demo-session"}'
+curl -X POST http://127.0.0.1:8787/session/reset ^
+  -H "Content-Type: application/json" ^
+  -H "X-Pilma-Secret: YOUR_SECRET" ^
+  -d "{\"sessionId\":\"demo\"}"
 ```
 
 Expected response:
+
 ```json
 {"status":"ok"}
 ```
 
-After resetting, deanonymization will not restore PII (tokens remain as-is).
+### 6. Warm up a model
 
-### 7. Test Model Warmup Placeholder
+Use a config that allows remote download, or pre-cache the configured model first. Then call:
 
 ```bash
-curl -X POST http://127.0.0.1:8787/model/warmup \
-  -H "Content-Type: application/json" \
-  -H "X-Pilma-Secret: YOUR_SECRET" \
-  -d '{}'
+curl -X POST http://127.0.0.1:8787/model/warmup ^
+  -H "Content-Type: application/json" ^
+  -H "X-Pilma-Secret: YOUR_SECRET" ^
+  -d "{\"modelId\":\"iiiorg/piiranha-v1-detect-personal-information\"}"
 ```
 
-Expected response:
+Expected response shape:
+
 ```json
 {
-  "status": "placeholder",
-  "message": "Model warmup will be implemented in PR2"
+  "status": "ok",
+  "modelId": "iiiorg/piiranha-v1-detect-personal-information",
+  "cached": true,
+  "loaded": true
 }
 ```
 
-## Running Tests
-
-```bash
-npm test
-```
-
-All tests should pass, including:
-- Vault tests (session isolation, category counts)
-- Anonymizer tests (regex-based PII detection, roundtrip)
-- Server tests (authentication, endpoints, error handling)
-- Trace tests (PII-safe logging)
-
-## Security Notes
-
-1. **No PII in logs**: The trace logs only contain lengths, category counts, and timings. Raw text is never logged.
-
-2. **Localhost only**: The service binds to 127.0.0.1 by default.
-
-3. **Secret required**: All POST endpoints require the `X-Pilma-Secret` header.
-
-4. **In-memory vault**: PII mappings are stored in memory only, never persisted to disk.
-
-## Current Limitations (To Be Addressed in PR2)
-
-1. **Simple regex patterns**: Currently detects EMAIL, PHONE, and SSN using regex. PR2 will integrate the HuggingFace model for better detection.
-
-2. **No chunking**: PR2 will implement chunking for models with short context windows.
-
-3. **No model download**: PR2 will implement model download and caching.
-
-## Example Roundtrip Flow
-
-```bash
-# Start service
-SECRET="test-secret-123" npm run companion
-
-# In another terminal:
-SECRET="test-secret-123"
-
-# Anonymize
-RESPONSE=$(curl -s -X POST http://127.0.0.1:8787/anonymize \
-  -H "Content-Type: application/json" \
-  -H "X-Pilma-Secret: $SECRET" \
-  -d '{"sessionId":"test","text":"Email: user@example.com, Phone: 555-123-4567"}')
-
-echo "Anonymized: $(echo $RESPONSE | jq -r '.text')"
-# Output: Email: §§EMAIL_1~XXXX§§, Phone: §§PHONE_1~YYYY§§
-
-# Deanonymize
-OBFUSCATED=$(echo $RESPONSE | jq -r '.text')
-curl -s -X POST http://127.0.0.1:8787/deanonymize \
-  -H "Content-Type: application/json" \
-  -H "X-Pilma-Secret: $SECRET" \
-  -d "{\"sessionId\":\"test\",\"text\":\"$OBFUSCATED\"}" | jq -r '.text'
-# Output: Email: user@example.com, Phone: 555-123-4567
-```
-
-## Risk Analysis
-
-### PII Leakage Risks
-- **Mitigated**: Regex patterns properly detect common PII formats
-- **Mitigated**: Tokens are stable and reversible
-- **Mitigated**: No PII in trace logs
-
-### Authentication Risks
-- **Mitigated**: Shared secret required for all POST endpoints
-- **Future**: Consider rotating secrets or using time-based tokens
-
-### Vault Risks
-- **Mitigated**: In-memory only, session-scoped
-- **Consideration**: No automatic cleanup of old sessions yet (could add TTL in future)
-
-### Network Risks
-- **Mitigated**: Localhost-only binding (127.0.0.1)
-- **Mitigated**: CORS configured for local development
+If remote download is disabled and the model is not cached, the endpoint should return an error message explaining that download is disabled.

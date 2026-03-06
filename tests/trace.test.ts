@@ -6,8 +6,7 @@ describe('tracing skeleton', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     // Intentionally include a raw field; logger must strip it
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const event: any = {
+    const event = {
       request_id: 'req-123',
       model_id: 'iiiorg/piiranha-v1-detect-personal-information',
       chunk_count: 2,
@@ -17,6 +16,16 @@ describe('tracing skeleton', () => {
       finished_at: Date.now() + 10,
       duration_ms: 10,
       raw_text: 'SHOULD_NOT_APPEAR',
+    } as {
+      request_id: string;
+      model_id: string;
+      chunk_count: number;
+      input_length: number;
+      category_counts: Record<string, number>;
+      started_at: number;
+      finished_at: number;
+      duration_ms: number;
+      raw_text: string;
     };
 
     logTrace(event);

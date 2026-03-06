@@ -85,4 +85,16 @@ describe('Vault', () => {
     expect(vault.retrieve('session-1', token)).toBe('user1@example.com');
     expect(vault.retrieve('session-2', token)).toBe('user2@example.com');
   });
+
+  it('issues stable tokens per session and value', () => {
+    const vault = new Vault();
+
+    const token1 = vault.issueToken('session-1', 'user@example.com', 'EMAIL');
+    const token2 = vault.issueToken('session-1', 'user@example.com', 'EMAIL');
+    const token3 = vault.issueToken('session-1', 'other@example.com', 'EMAIL');
+
+    expect(token1).toBe(token2);
+    expect(token3).not.toBe(token1);
+    expect(vault.retrieve('session-1', token3)).toBe('other@example.com');
+  });
 });

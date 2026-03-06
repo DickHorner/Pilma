@@ -1,137 +1,119 @@
-# Pilma - the PII LLM Anonymizer — Local Identity Firewall
+# Pilma
 
-## Status
-Baseline PR0 applied: docs (ARCHITECTURE.md, THREAT_MODEL.md, CONTRIBUTING.md), Node/TS lint/test/build scripts, and a PII-safe tracing skeleton.
-See ARCHITECTURE.md and THREAT_MODEL.md for details.
+Pilma is a privacy-first companion service that anonymizes sensitive text before it leaves the user's machine and restores it locally afterward.
 
-Pilma is a **local-first PII anonymization tool** that can also run as a **localhost companion service** for a **Chrome/Firefox browser extension**.
+## Current Scope
 
-The goal: **prevent sensitive data (PII) from ever reaching LLM chat platforms** by replacing it with robust placeholders *before* sending, then restoring it locally for the user.
+This repository currently ships the localhost companion service and its supporting docs/tests. The browser extension described in the architecture documents is planned work, not a checked-in build target in this repo yet.
 
-## What it does
+## What Works Today
 
-- **Detects PII locally** using a HuggingFace token-classification model (downloaded on demand by the user)
-- **Obfuscates outbound text** with stable tokens (e.g. `§§EMAIL_1~A1Z8K§§`)
-- **Maintains a local vault** (mapping token ↔ original PII) for reversible restoration
-- Runs as:
-  - a standalone desktop app, and/or
-  - a **localhost HTTP API** used by a browser extension
-- Supports **Chrome + Firefox** via a single WebExtension codebase
+- `POST /anonymize` replaces detected PII with vault-backed tokens.
+- `POST /deanonymize` restores tokens for the same session.
+- `POST /session/reset` clears a session vault.
+- `POST /model/warmup` warms a configured model when it is already cached or remote download is allowed.
+- `GET /health` returns service status.
 
-## Why “model download per locale”?
+Security and privacy defaults:
 
-To keep installers/extensions lightweight (and to respect model licensing), Pilma does **not** bundle large model weights.
-Users choose the best model for their locale and download it locally.
+- binds to `127.0.0.1` by default
+- requires `X-Pilma-Secret` on all POST routes
+- checks auth before reading request bodies
+- caps JSON request bodies at 1 MiB
+- keeps PII mappings in memory only, with session TTL cleanup
+- emits structured traces without raw text or raw PII
 
-## High-level architecture
-
-1) **Browser Extension**
-- Intercepts chat input (textarea/contenteditable)
-- Calls `POST http://127.0.0.1:<port>/anonymize`
-- Sends only obfuscated text to the website
-- Watches assistant output and calls `POST /deanonymize` before display
-
-2) **Pilma Companion Service (localhost)**
-- Loads the configured model from local cache
-- Detects PII spans and replaces them with tokens
-- Restores tokens using an in-memory vault (scoped by session)
-
-**Security baseline**
-- Loopback only (127.0.0.1)
-- Shared secret header required for all POST requests
-- No raw PII in logs
-
-## Privacy & threat model (short)
-
-- Pilma keeps PII local. The website receives only tokens.
-- The browser extension can either:
-  - **replace tokens in the DOM** (convenient but less private), or
-  - **use a “reveal overlay”** (recommended hardening) so the page never sees restored PII in its DOM.
-
-## Companion API
-
-Typical endpoints:
-
-- `GET /health`
-- `POST /anonymize`
-  - input: `{ "sessionId": "...", "text": "..." }`
-  - output: `{ "text": "...tokens...", "counts": {...}, "traceId": "..." }`
-- `POST /deanonymize`
-  - input: `{ "sessionId": "...", "text": "..." }`
-  - output: `{ "text": "...restored..." }`
-- `POST /model/warmup`
-  - downloads/caches the configured model (if allowed) and runs a warmup inference
-- `POST /session/reset`
-  - clears the in-memory vault for that session
-
-All POST requests require a header like:
-- `X-Pilma-Secret: <shared-secret>`
-
-## Model support
-
-Default recommended model (user downloads explicitly):
-- `iiiorg/piiranha-v1-detect-personal-information`
-
-Notes:
-- Short context window (chunking required)
-- Multi-language support (incl. German)
-- License may restrict bundling and commercial use — this repo treats models as user-provided downloads.
-
-## Install & run (developer)
+## Quick Start
 
 ```bash
 npm install
+npm run lint
+npm run typecheck
 npm test
-npm run dev
-Start companion service
 npm run companion
 ```
 
-It prints:
-- service URL (default http://127.0.0.1:8787)
-- shared secret (paste into extension options)
+The companion service starts on `http://127.0.0.1:8787` by default and prints the shared secret you should provide to a trusted local client.
 
-## Build browser extension
+## API
 
-```npm run ext:build:all```
+### `GET /health`
 
-## Outputs:
-- extension/dist/chrome
-- extension/dist/firefox
+Returns:
 
-## Load extension (dev)
-### Chrome
-- chrome://extensions
-- Developer mode → “Load unpacked” → extension/dist/chrome
-### Firefox
-- about:debugging#/runtime/this-firefox
-- “Load Temporary Add-on…” → extension/dist/firefox/manifest.json
-Open extension options:
-- set service URL
-- paste shared secret
-- choose locale/model config
+```json
+{ "status": "ok", "sessions": 0 }
+```
 
-## Evaluation (recommended)
-We track:
+### `POST /anonymize`
 
-- Leakage rate (raw PII must not appear after anonymize)
-- Round-trip integrity (deanonymize(anonymize(text)) == text)
-- Token mutation safety (if tokens are altered, do not restore incorrectly)
+Headers:
 
-A small JSONL dataset format is recommended:
-```{"id":"1","text":"Email max@example.com","pii":[{"type":"EMAIL","start":6,"end":21}]}```
+```text
+X-Pilma-Secret: <shared-secret>
+Content-Type: application/json
+```
 
-## Observability (PII-safe tracing)
-Tracing must never contain raw text or raw PII.
-Allowed telemetry:
-- text length
-- category counts (EMAIL:2, PHONE:1…)
-- timings (load/infer/replace/restore)
-- model id + locale
-- request/trace id
+Body:
 
-## Contributing
-- Keep PRs small and reviewable
-- Add/extend tests with every change
-- Do not add real PII to fixtures, logs, screenshots, or docs
-- Include a short security/privacy impact note for changes that touch the vault, token format, or network layer
+```json
+{ "sessionId": "demo-session", "text": "Email me at user@example.com" }
+```
+
+Response:
+
+```json
+{
+  "text": "Email me at §§EMAIL_1~D2B9D7F4§§",
+  "counts": { "EMAIL": 1 },
+  "traceId": "trace-..."
+}
+```
+
+### `POST /deanonymize`
+
+Body:
+
+```json
+{ "sessionId": "demo-session", "text": "Email me at §§EMAIL_1~D2B9D7F4§§" }
+```
+
+### `POST /session/reset`
+
+Body:
+
+```json
+{ "sessionId": "demo-session" }
+```
+
+### `POST /model/warmup`
+
+Body:
+
+```json
+{ "modelId": "iiiorg/piiranha-v1-detect-personal-information" }
+```
+
+or
+
+```json
+{ "locale": "en" }
+```
+
+If remote download is disabled and the model is not already cached, the route returns an error instead of silently downloading.
+
+## Project Layout
+
+- `src/companion`: service implementation
+- `src/tracing`: structured trace emission
+- `tests`: unit and integration coverage
+- `ARCHITECTURE.md`: system-level architecture
+- `THREAT_MODEL.md`: baseline privacy and security risks
+- `RUNBOOK.md`: operational runbook
+
+## Delivery Expectations
+
+- keep PRs small and reversible
+- add or update tests with behavior changes
+- do not commit real PII, secrets, or production screenshots with sensitive data
+- document security and operational impact for changes touching networking, vault storage, or token handling

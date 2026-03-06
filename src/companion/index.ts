@@ -17,13 +17,15 @@ function main(): void {
 
   const server = new CompanionServer({ port, host, secret });
 
-  server.start().then(() => {
-    console.log('Companion service started successfully.');
-    console.log(`Copy this secret to your extension options: ${secret}`);
-  }).catch((err) => {
-    console.error('Failed to start companion service:', err);
-    process.exit(1);
-  });
+  server.start()
+    .then(() => {
+      console.log('Companion service started successfully.');
+      console.log(`Copy this secret to your extension options: ${secret}`);
+    })
+    .catch((err) => {
+      console.error('Failed to start companion service:', err);
+      process.exit(1);
+    });
 
   // Graceful shutdown
   process.on('SIGINT', () => {

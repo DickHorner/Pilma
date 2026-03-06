@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Vault } from './vault';
 import { logTrace } from '../tracing/trace';
 
@@ -47,34 +48,17 @@ export class Anonymizer {
    * Anonymize text by detecting and replacing PII with stable tokens.
    */
   anonymize(sessionId: string, text: string): AnonymizeResult {
-    const traceId = `trace-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    const traceId = `trace-${crypto.randomUUID()}`;
     const startTime = Date.now();
-
-    let obfuscatedText = text;
     const categoryCounts: Record<string, number> = {};
+    let obfuscatedText = text;
 
-    // Process each PII pattern
     for (const pattern of PII_PATTERNS) {
-      const matches = Array.from(text.matchAll(pattern.regex));
-      
-      for (let i = 0; i < matches.length; i++) {
-        const match = matches[i];
-        const originalText = match[0];
-        
-        // Generate stable token
-        const tokenId = `${pattern.category}_${i + 1}`;
-        const hash = this.simpleHash(originalText);
-        const token = `§§${tokenId}~${hash}§§`;
-
-        // Store in vault
-        this.vault.store(sessionId, token, originalText, pattern.category);
-
-        // Replace in text
-        obfuscatedText = obfuscatedText.replace(originalText, token);
-
-        // Update counts
+      obfuscatedText = obfuscatedText.replace(pattern.regex, (match) => {
+        const token = this.vault.issueToken(sessionId, match, pattern.category);
         categoryCounts[pattern.category] = (categoryCounts[pattern.category] ?? 0) + 1;
-      }
+        return token;
+      });
     }
 
     const finishTime = Date.now();
@@ -119,19 +103,5 @@ export class Anonymizer {
     return {
       text: restoredText,
     };
-  }
-
-  /**
-   * Simple hash function for token generation.
-   * Creates a short alphanumeric hash of the input.
-   */
-  private simpleHash(input: string): string {
-    let hash = 0;
-    for (let i = 0; i < input.length; i++) {
-      const char = input.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash).toString(36).toUpperCase().substring(0, 4);
   }
 }
