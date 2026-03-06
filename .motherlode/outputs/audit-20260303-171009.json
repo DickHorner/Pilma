@@ -1,0 +1,204 @@
+{
+  "generated_at": "2026-03-03T17:10:09.0966306+01:00",
+  "repository_root": "C:\\Users\\jaspe\\OneDrive\\Coding\\ViccoBoard",
+  "score_percent": 86.8,
+  "passed_checks": 15,
+  "total_checks": 18,
+  "earned_weight": 33.0,
+  "total_weight": 38.0,
+  "json_report": "C:\\Users\\jaspe\\OneDrive\\Coding\\ViccoBoard\\.motherlode\\outputs\\audit-20260303-171009.json",
+  "markdown_report": "C:\\Users\\jaspe\\OneDrive\\Coding\\ViccoBoard\\.motherlode\\outputs\\audit-20260303-171009.md",
+  "failed_checks": [
+    {
+      "id": "docs.runbook",
+      "category": "operations",
+      "weight": 2,
+      "status": "FAIL",
+      "passed": false,
+      "evidence": "missing",
+      "remediation": "Add operational runbooks for critical workflows."
+    },
+    {
+      "id": "ownership.bus_factor",
+      "category": "governance",
+      "weight": 2,
+      "status": "FAIL",
+      "passed": false,
+      "evidence": "owners in CODEOWNERS: 1",
+      "remediation": "Ensure at least two owners for critical paths in CODEOWNERS."
+    },
+    {
+      "id": "release.changelog",
+      "category": "operations",
+      "weight": 1,
+      "status": "FAIL",
+      "passed": false,
+      "evidence": "missing",
+      "remediation": "Add CHANGELOG.md for release transparency."
+    }
+  ],
+  "checks": [
+    {
+      "id": "docs.readme",
+      "category": "governance",
+      "weight": 2,
+      "status": "PASS",
+      "passed": true,
+      "evidence": "README.md",
+      "remediation": "Add or update README.md with setup, usage, and contribution basics."
+    },
+    {
+      "id": "docs.contributing",
+      "category": "governance",
+      "weight": 2,
+      "status": "PASS",
+      "passed": true,
+      "evidence": "CONTRIBUTING.md",
+      "remediation": "Add CONTRIBUTING.md with PR and testing requirements."
+    },
+    {
+      "id": "docs.security",
+      "category": "security",
+      "weight": 3,
+      "status": "PASS",
+      "passed": true,
+      "evidence": "SECURITY.md",
+      "remediation": "Add SECURITY.md with private reporting process and response targets."
+    },
+    {
+      "id": "docs.codeowners",
+      "category": "governance",
+      "weight": 2,
+      "status": "PASS",
+      "passed": true,
+      "evidence": ".github/CODEOWNERS",
+      "remediation": "Add .github/CODEOWNERS for ownership clarity."
+    },
+    {
+      "id": "docs.architecture",
+      "category": "maintainability",
+      "weight": 2,
+      "status": "PASS",
+      "passed": true,
+      "evidence": "ARCHITECTURE_DECISIONS.md",
+      "remediation": "Add architecture decision records or architecture docs."
+    },
+    {
+      "id": "docs.runbook",
+      "category": "operations",
+      "weight": 2,
+      "status": "FAIL",
+      "passed": false,
+      "evidence": "missing",
+      "remediation": "Add operational runbooks for critical workflows."
+    },
+    {
+      "id": "ci.workflow",
+      "category": "delivery",
+      "weight": 3,
+      "status": "PASS",
+      "passed": true,
+      "evidence": ".github/workflows/ci.yml",
+      "remediation": "Add CI workflow to run tests, lint/typecheck, and build."
+    },
+    {
+      "id": "security.sast",
+      "category": "security",
+      "weight": 2,
+      "status": "PASS",
+      "passed": true,
+      "evidence": ".github/workflows/codeql.yml",
+      "remediation": "Enable static analysis workflow (for example CodeQL)."
+    },
+    {
+      "id": "deps.lockfile",
+      "category": "supply-chain",
+      "weight": 2,
+      "status": "PASS",
+      "passed": true,
+      "evidence": "package-lock.json",
+      "remediation": "Commit a dependency lockfile for reproducibility."
+    },
+    {
+      "id": "agents.instructions",
+      "category": "ai-governance",
+      "weight": 1,
+      "status": "PASS",
+      "passed": true,
+      "evidence": "AGENTS.md",
+      "remediation": "Add AGENTS.md or agents.md for agent behavior constraints."
+    },
+    {
+      "id": "motherlode.present",
+      "category": "ai-governance",
+      "weight": 2,
+      "status": "PASS",
+      "passed": true,
+      "evidence": ".motherlode/MOTHERLODE.md",
+      "remediation": "Add .motherlode/MOTHERLODE.md and activation scripts."
+    },
+    {
+      "id": "release.changelog",
+      "category": "operations",
+      "weight": 1,
+      "status": "FAIL",
+      "passed": false,
+      "evidence": "missing",
+      "remediation": "Add CHANGELOG.md for release transparency."
+    },
+    {
+      "id": "scripts.test",
+      "category": "quality",
+      "weight": 3,
+      "status": "PASS",
+      "passed": true,
+      "evidence": "package.json:scripts.test",
+      "remediation": "Add automated test script in package.json."
+    },
+    {
+      "id": "scripts.build",
+      "category": "quality",
+      "weight": 2,
+      "status": "PASS",
+      "passed": true,
+      "evidence": "package.json:scripts.build",
+      "remediation": "Add build script in package.json."
+    },
+    {
+      "id": "scripts.typecheck_or_lint",
+      "category": "quality",
+      "weight": 2,
+      "status": "PASS",
+      "passed": true,
+      "evidence": "package.json:scripts.(typecheck/lint)",
+      "remediation": "Add lint or typecheck scripts for fast quality feedback."
+    },
+    {
+      "id": "tests.present",
+      "category": "quality",
+      "weight": 3,
+      "status": "PASS",
+      "passed": true,
+      "evidence": "78 test/spec files",
+      "remediation": "Add test files for core behavior and contracts."
+    },
+    {
+      "id": "security.response_targets",
+      "category": "security",
+      "weight": 2,
+      "status": "PASS",
+      "passed": true,
+      "evidence": "14-day: True, 60-day: True",
+      "remediation": "Document 14-day response and 60-day fix targets in SECURITY.md."
+    },
+    {
+      "id": "ownership.bus_factor",
+      "category": "governance",
+      "weight": 2,
+      "status": "FAIL",
+      "passed": false,
+      "evidence": "owners in CODEOWNERS: 1",
+      "remediation": "Ensure at least two owners for critical paths in CODEOWNERS."
+    }
+  ]
+}

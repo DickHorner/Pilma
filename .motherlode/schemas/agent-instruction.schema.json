@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://motherlode.local/schemas/agent-instruction.schema.json",
+  "title": "Motherlode Agent Instruction",
+  "type": "object",
+  "required": [
+    "agent_name",
+    "version",
+    "mission",
+    "scope",
+    "constraints",
+    "inputs",
+    "outputs",
+    "workflow",
+    "quality_gates",
+    "escalation"
+  ],
+  "properties": {
+    "agent_name": {
+      "type": "string",
+      "minLength": 3
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "mission": {
+      "type": "string",
+      "minLength": 10
+    },
+    "scope": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "required": ["must", "must_not"],
+      "properties": {
+        "must": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "must_not": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type", "required"],
+        "properties": {
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "required": { "type": "boolean" },
+          "description": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "format"],
+        "properties": {
+          "name": { "type": "string" },
+          "format": { "type": "string" },
+          "description": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "workflow": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["step", "action", "evidence"],
+        "properties": {
+          "step": { "type": "integer", "minimum": 1 },
+          "action": { "type": "string" },
+          "evidence": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "quality_gates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "escalation": {
+      "type": "object",
+      "required": ["when", "handoff_to", "required_context"],
+      "properties": {
+        "when": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "handoff_to": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "required_context": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
