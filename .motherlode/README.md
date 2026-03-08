@@ -1,51 +1,45 @@
-# Motherlode Dotfiles Pack
+# Motherlode v2
 
-This folder is the single source of truth for cross-repo engineering standards, audit criteria, and LLM-agent activation.
+Motherlode is a portable governance and activation package for repositories.
 
-Use this package when you want to:
+It is designed for this flow:
+1. Copy `.motherlode` into a repository.
+2. Run the audit to establish a baseline.
+3. Start an activation chat prompt.
+4. Let Codex inspect the repository and propose repo-appropriate rules.
+5. Review the proposed rules with the human owner.
+6. Enable only the rules that make sense for this repository.
+7. Re-run the audit with the approved activation profile.
 
-- audit any repository against one consistent standard,
-- prioritize refactoring by risk and impact,
-- generate strong instructions for specialized AI agents,
-- keep delivery quality consistent across projects.
+## Key idea
+Motherlode separates:
+- constitution: universal engineering philosophy,
+- baseline audit: generic repo hygiene and evidence checks,
+- activation profile: repo-specific enabled rules,
+- custom checks: optional repo-local executable rules.
 
-## One-command usage
+## Files
+- `MOTHERLODE.md`: engineering constitution.
+- `config/audit.rules.json`: generic defaults and audit behavior.
+- `config/activation.profile.template.json`: template for per-repo enabled rules.
+- `scripts/audit.ps1`: baseline + activation-aware audit.
+- `scripts/activate.ps1`: emits a chat-ready activation prompt.
+- `prompts/system.motherlode.md`: system-style instruction bundle for Codex.
+- `prompts/task.activate.md`: task prompt for first repo activation.
+- `checks/`: optional repo-local executable checks.
+- `templates/`: reusable docs and review artifacts.
 
+## Typical usage
 ```powershell
+pwsh -NoLogo -File .\.motherlode\scripts\bootstrap.ps1
+pwsh -NoLogo -File .\.motherlode\scripts\audit.ps1
 pwsh -NoLogo -File .\.motherlode\scripts\activate.ps1 -RunAudit -CopyToClipboard
 ```
 
-This command:
-
-1. validates scaffold directories,
-2. runs baseline audit,
-3. generates a ready-to-paste activation prompt,
-4. copies that prompt to your clipboard (if available).
-
-## Key files
-
-- `MOTHERLODE.md`: canonical engineering constitution
-- `prompts/system.motherlode.md`: LLM system-level behavior contract
-- `prompts/task.activate.md`: task activation prompt template
-- `prompts/agent-factory.md`: instructions for generating required sub-agents
-- `schemas/agent-instruction.schema.json`: machine-readable agent spec schema
-- `templates/*`: reusable docs for ADRs, runbooks, gap reports, and refactor plans
-- `scripts/audit.ps1`: baseline quality and risk audit
-- `scripts/bootstrap.ps1`: scaffold and readiness setup
-- `scripts/activate.ps1`: one-shot prompt generation plus optional audit
-
-## Port to another repository
-
-1. Copy `.motherlode/` into the target repository root.
-2. Run:
-
-```powershell
-pwsh -NoLogo -File .\.motherlode\scripts\bootstrap.ps1
-```
-
-3. Run activation:
-
-```powershell
-pwsh -NoLogo -File .\.motherlode\scripts\activate.ps1 -RunAudit
-```
-
+## Activation model
+Codex should not blindly enforce everything. It should:
+- inspect the repository stack and risk surface,
+- propose which optional rules are sensible,
+- explain why,
+- review the proposal with the human,
+- write `.motherlode/config/activation.profile.json` only after approval.

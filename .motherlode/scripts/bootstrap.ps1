@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-  [switch]$ScaffoldRepoDocs
+  [switch]$ScaffoldRepoDocs,
+  [switch]$ScaffoldActivationProfile
 )
 
 $ErrorActionPreference = 'Stop'
@@ -8,10 +9,12 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 
 $requiredDirs = @(
   '.motherlode',
+  '.motherlode\config',
   '.motherlode\prompts',
   '.motherlode\schemas',
   '.motherlode\templates',
   '.motherlode\scripts',
+  '.motherlode\checks',
   '.motherlode\outputs'
 )
 
@@ -23,21 +26,19 @@ foreach ($relativeDir in $requiredDirs) {
 if ($ScaffoldRepoDocs) {
   $adrDir = Join-Path $repoRoot 'docs\adr'
   $runbookDir = Join-Path $repoRoot 'docs\runbooks'
+  $riskDir = Join-Path $repoRoot 'docs\change-risk'
   New-Item -ItemType Directory -Path $adrDir -Force | Out-Null
   New-Item -ItemType Directory -Path $runbookDir -Force | Out-Null
+  New-Item -ItemType Directory -Path $riskDir -Force | Out-Null
+}
 
-  $adrIndex = Join-Path $adrDir 'README.md'
-  if (-not (Test-Path $adrIndex)) {
-    Set-Content -Path $adrIndex -Encoding utf8 -Value "# ADR Index`n`nStore architecture decision records in this folder."
-  }
-
-  $runbookIndex = Join-Path $runbookDir 'README.md'
-  if (-not (Test-Path $runbookIndex)) {
-    Set-Content -Path $runbookIndex -Encoding utf8 -Value "# Runbook Index`n`nStore operational runbooks in this folder."
+if ($ScaffoldActivationProfile) {
+  $template = Join-Path $repoRoot '.motherlode\config\activation.profile.template.json'
+  $target = Join-Path $repoRoot '.motherlode\config\activation.profile.json'
+  if ((Test-Path $template) -and -not (Test-Path $target)) {
+    Copy-Item -Path $template -Destination $target -Force
   }
 }
 
 Write-Output "Bootstrap complete: $repoRoot"
 Write-Output 'Next: pwsh -NoLogo -File .\.motherlode\scripts\activate.ps1 -RunAudit -CopyToClipboard'
-
-

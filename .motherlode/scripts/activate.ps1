@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string]$Task = 'Audit this repository against .motherlode/MOTHERLODE.md and execute the top 3 remediations with tests.',
+  [string]$Task = 'Audit this repository, inspect repository context, propose activatable Motherlode rules, review them with me, then implement the approved profile.',
   [switch]$RunAudit,
   [switch]$CopyToClipboard
 )
@@ -28,15 +28,20 @@ Primary task:
 Required execution order:
 1. Run .motherlode/scripts/audit.ps1 and read the latest report in .motherlode/outputs.
 2. Produce a prioritized gap report by risk and effort.
-3. Execute top 3 remediations using small reversible changes.
-4. Add or update tests for every behavior change.
-5. Re-run audit and report score delta.
-6. Return changed files, verification evidence, unresolved risks, and next 3 actions.
+3. Inspect repository context: stack, repo shape, risk surface, internet exposure, sensitive data handling, and operational criticality.
+4. Propose activatable rules from .motherlode/config/audit.rules.json that are sensible for this repo.
+5. Review the proposal with the human owner before enabling anything beyond baseline.
+6. Write .motherlode/config/activation.profile.json only after approval.
+7. Execute approved remediations using small reversible changes.
+8. Add or update tests for every behavior change.
+9. Re-run audit and report score delta.
+10. Return changed files, repository context summary, approved rules, verification evidence, unresolved risks, and next 3 actions.
 
 Quality gates:
 - No critical security regressions.
 - Tests must pass.
 - Docs and runbooks must be updated for material behavior changes.
+- No repo-specific enforcement rule may be enabled without explicit rationale.
 
 Context:
 - $auditSummary

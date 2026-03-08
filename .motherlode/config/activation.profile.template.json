@@ -1,0 +1,35 @@
+{
+  "version": "1.0.0",
+  "repo_name": "replace-me",
+  "approved_by": "replace-me",
+  "approved_on": "YYYY-MM-DD",
+  "repo_context": {
+    "primary_stack": [],
+    "repo_type": "application|library|service|monorepo|tooling|other",
+    "internet_facing": false,
+    "handles_sensitive_data": false,
+    "notes": []
+  },
+  "enabled_rules": {
+    "baseline_audit": true,
+    "risky_change_notes": true,
+    "architecture_boundaries": false,
+    "trust_boundary_validation": false,
+    "sensitive_logging": false,
+    "observability_minimums": false
+  },
+  "rule_rationale": {
+    "architecture_boundaries": "",
+    "trust_boundary_validation": "",
+    "sensitive_logging": "",
+    "observability_minimums": "",
+    "risky_change_notes": ""
+  },
+  "repo_specific_overrides": {
+    "min_codeowners": 2,
+    "sensitive_paths": [],
+    "critical_paths": [],
+    "forbidden_log_patterns": [],
+    "allowed_log_exceptions": []
+  }
+}

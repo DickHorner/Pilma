@@ -1,5 +1,5 @@
 # Motherlode Engineering Constitution
-Version: 1.0
+Version: 2.1
 Scope: all repositories, all human contributors, all AI agents
 
 ## 1) Prime Directive
@@ -18,7 +18,7 @@ Prefer explicit, testable solutions over clever shortcuts.
 
 ## 3) Definition of Done
 A change is done only when all pass:
-- Build, lint/typecheck, and tests pass.
+- Build, lint or typecheck, and tests pass.
 - New behavior has test coverage at the right level.
 - Security checks run and critical issues are resolved.
 - Risky changes include migration plus rollback notes.
@@ -106,11 +106,24 @@ Reference schema: `.motherlode/schemas/agent-instruction.schema.json`.
 When this constitution exists in a repo, agents should:
 1. run `.motherlode/scripts/audit.ps1`,
 2. produce prioritized gap report,
-3. execute top remediations in reversible steps,
-4. rerun audit and report delta,
-5. leave next actions with risk-aware ordering.
+3. inspect repository context and risk surface,
+4. propose activatable rules suited to this repo,
+5. review the proposal with the human owner,
+6. write `.motherlode/config/activation.profile.json` only after approval,
+7. execute remediations in reversible steps,
+8. rerun audit and report delta,
+9. leave next actions with risk-aware ordering.
 
-## 12) Reference Baselines
+## 12) Enforcement Model
+Motherlode distinguishes between:
+- baseline checks: generic repo hygiene and evidence checks,
+- activation-aware checks: checks enabled for this specific repo,
+- custom checks: repo-local executable checks loaded from `.motherlode/checks`,
+- local policy: repo-tunable rules loaded from `.motherlode/config`.
+
+A high score from baseline checks alone is not sufficient evidence that the constitution is fully enforced.
+
+## 13) Reference Baselines
 - OWASP ASVS
 - OWASP Top 10
 - NIST SSDF

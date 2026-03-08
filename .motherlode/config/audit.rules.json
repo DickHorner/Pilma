@@ -1,0 +1,119 @@
+{
+  "version": "2.1.0",
+  "audit": {
+    "min_codeowners": 2,
+    "default_output_dir": ".motherlode/outputs",
+    "report_formats": ["json", "markdown"],
+    "score_mode": "weighted"
+  },
+  "paths": {
+    "docs": {
+      "readme": ["README.md"],
+      "contributing": ["CONTRIBUTING.md"],
+      "security": ["SECURITY.md"],
+      "architecture": ["ARCHITECTURE_DECISIONS.md", "docs/adr", "docs/architecture"],
+      "runbook": ["RUNBOOK.md", "docs/runbooks", "docs/ops"],
+      "changelog": ["CHANGELOG.md"]
+    },
+    "governance": {
+      "codeowners": [".github/CODEOWNERS"],
+      "agents": ["AGENTS.md", "agents.md"],
+      "motherlode": [".motherlode/MOTHERLODE.md"]
+    },
+    "ci": {
+      "workflow": [".github/workflows/ci.yml", ".github/workflows/ci.yaml"],
+      "sast": [".github/workflows/codeql.yml", ".github/workflows/codeql.yaml"]
+    },
+    "dependency_lockfiles": ["package-lock.json", "pnpm-lock.yaml", "yarn.lock", "poetry.lock", "Cargo.lock", "Gemfile.lock"],
+    "package_manifests": ["package.json"],
+    "risk_note_paths": ["docs/change-risk", ".motherlode/records/change-risk"]
+  },
+  "package_scripts": {
+    "test": ["test"],
+    "build": ["build"],
+    "lint_or_typecheck": ["lint", "lint:docs", "typecheck", "check"]
+  },
+  "test_file_patterns": [
+    "\\.(test|spec)\\.(ts|tsx|js|jsx)$",
+    "(^|/)tests?/.*\\.(ts|tsx|js|jsx|py|go|rs)$",
+    "_test\\.go$",
+    "(^|/)test_.*\\.py$"
+  ],
+  "security_response_targets": {
+    "required_patterns": ["14\\s*day|14-day|14 days", "60\\s*day|60-day|60 days"]
+  },
+  "risk_notes": {
+    "enabled": true,
+    "git_diff_base": "HEAD",
+    "sensitive_path_patterns": [
+      "(^|/)auth(/|$)",
+      "(^|/)security(/|$)",
+      "(^|/)vault(/|$)",
+      "(^|/)secrets?(/|$)",
+      "(^|/)token(s)?(/|$)",
+      "(^|/)network(/|$)",
+      "(^|/)download(s)?(/|$)",
+      "(^|/)persistence(/|$)",
+      "(^|/)db(/|$)",
+      "(^|/)migration(s)?(/|$)"
+    ],
+    "required_markers": [
+      "## Scope",
+      "## Risk",
+      "## Rollback Plan",
+      "## Verification Evidence"
+    ]
+  },
+  "custom_checks": {
+    "directory": ".motherlode/checks",
+    "enabled": true
+  },
+  "weights": {
+    "docs.readme": 2,
+    "docs.contributing": 2,
+    "docs.security": 3,
+    "docs.codeowners": 2,
+    "docs.architecture": 2,
+    "docs.runbook": 2,
+    "ci.workflow": 3,
+    "security.sast": 2,
+    "deps.lockfile": 2,
+    "agents.instructions": 1,
+    "motherlode.present": 2,
+    "release.changelog": 1,
+    "scripts.test": 3,
+    "scripts.build": 2,
+    "scripts.typecheck_or_lint": 2,
+    "tests.present": 3,
+    "security.response_targets": 2,
+    "ownership.bus_factor": 2,
+    "risk.change_notes": 3
+  },
+  "activatable_rule_catalog": {
+    "architecture_boundaries": {
+      "default_enabled": false,
+      "why": "Useful for monorepos and layered apps with stable module boundaries.",
+      "requires": ["custom check or repo-specific config"]
+    },
+    "trust_boundary_validation": {
+      "default_enabled": false,
+      "why": "Useful for APIs, services, auth flows, and internet-facing apps.",
+      "requires": ["critical path identification"]
+    },
+    "sensitive_logging": {
+      "default_enabled": false,
+      "why": "Useful for any app processing user input, secrets, vault data, or PII.",
+      "requires": ["repo-specific patterns"]
+    },
+    "observability_minimums": {
+      "default_enabled": false,
+      "why": "Useful for production services, background workers, and critical workflows.",
+      "requires": ["critical path identification"]
+    },
+    "risky_change_notes": {
+      "default_enabled": true,
+      "why": "Useful whenever auth, security, networking, persistence, or migrations change.",
+      "requires": ["git available for diff-aware mode"]
+    }
+  }
+}
