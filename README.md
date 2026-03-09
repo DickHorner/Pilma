@@ -18,6 +18,7 @@ Security and privacy defaults:
 
 - binds to `127.0.0.1` by default
 - requires `X-Pilma-Secret` on all POST routes
+- requires an explicit startup `SECRET` instead of generating or echoing one
 - checks auth before reading request bodies
 - caps JSON request bodies at 1 MiB
 - keeps PII mappings in memory only, with session TTL cleanup
@@ -30,10 +31,18 @@ npm install
 npm run lint
 npm run typecheck
 npm test
+export SECRET='replace-with-a-long-random-shared-value'
 npm run companion
 ```
 
-The companion service starts on `http://127.0.0.1:8787` by default and prints the shared secret you should provide to a trusted local client.
+PowerShell alternative:
+
+```powershell
+$env:SECRET = 'replace-with-a-long-random-shared-value'
+npm run companion
+```
+
+The companion service starts on `http://127.0.0.1:8787` by default. It requires an explicit `SECRET` environment variable and does not print that shared credential at startup.
 
 ## API
 

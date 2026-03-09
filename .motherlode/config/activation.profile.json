@@ -1,0 +1,61 @@
+{
+  "version": "1.0.0",
+  "repo_name": "Pilma",
+  "approved_by": "jaspe",
+  "approved_on": "2026-03-09",
+  "repo_context": {
+    "primary_stack": ["TypeScript", "Node.js", "Vitest", "PowerShell"],
+    "repo_type": "service",
+    "internet_facing": false,
+    "handles_sensitive_data": true,
+    "notes": [
+      "Localhost-only companion service handles PII anonymization and deanonymization.",
+      "Authentication relies on a shared local secret header.",
+      "Model warmup may download user-selected models only when explicitly enabled."
+    ]
+  },
+  "enabled_rules": {
+    "baseline_audit": true,
+    "risky_change_notes": true,
+    "architecture_boundaries": false,
+    "trust_boundary_validation": true,
+    "sensitive_logging": true,
+    "observability_minimums": false
+  },
+  "rule_rationale": {
+    "architecture_boundaries": "Deferred until the browser extension or additional packages create clearer cross-module boundaries worth enforcing.",
+    "trust_boundary_validation": "Enabled because the localhost API is the main trust boundary for auth, body parsing, CORS, session handling, and optional model warmup/download flows.",
+    "sensitive_logging": "Enabled because the primary privacy contract depends on never logging raw PII, secrets, or vault contents while still allowing sanitized traces.",
+    "observability_minimums": "Deferred until the repo defines stronger production-facing telemetry minimums beyond the current structured trace baseline.",
+    "risky_change_notes": "Enabled because auth, vault, logging, networking, and model download changes materially affect privacy and operational risk."
+  },
+  "repo_specific_overrides": {
+    "min_codeowners": 2,
+    "sensitive_paths": [
+      "src/companion/index.ts",
+      "src/companion/server.ts",
+      "src/companion/vault.ts",
+      "src/companion/model-manager.ts",
+      "src/tracing/trace.ts"
+    ],
+    "critical_paths": [
+      "src/companion/config.ts",
+      "src/companion/server.ts",
+      "src/companion/anonymizer.ts",
+      "src/companion/vault.ts",
+      "src/companion/model-manager.ts",
+      "src/tracing/trace.ts",
+      "tests/server.test.ts",
+      "tests/server-warmup.test.ts"
+    ],
+    "forbidden_log_patterns": [
+      "raw text",
+      "request text",
+      "x-pilma-secret",
+      "vault",
+      "mapping",
+      "token"
+    ],
+    "allowed_log_exceptions": []
+  }
+}

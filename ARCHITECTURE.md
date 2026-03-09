@@ -7,10 +7,11 @@ This document outlines the baseline architecture for the Pilma Identity Firewall
   - HTTP API running on loopback only by default (127.0.0.1).
   - Endpoints:
     - GET /health — service status
-    - POST /anonymize — obfuscate PII from user input
-    - POST /deanonymize — restore obfuscated placeholders in responses
-    - POST /model/warmup — lazily prepare model(s) after user-download
+    - POST /anonymize - obfuscate PII from user input
+    - POST /deanonymize - restore obfuscated placeholders in responses
+    - POST /model/warmup - lazily prepare model(s) after user-download
   - Requires a shared secret header (e.g., X-Pilma-Secret).
+  - Startup requires an explicit shared secret provided out-of-band (for example via environment variable) and does not echo it in logs.
   - In-memory vault for short-lived PII mappings.
 
 - **Browser Extension (Chrome + Firefox)**
@@ -36,6 +37,7 @@ This document outlines the baseline architecture for the Pilma Identity Firewall
 - No raw PII in logs; structured JSON logs only with shapes, lengths, and category counts.
 - In-memory vault; avoid disk persistence for PII.
 - Shared secret required for companion requests.
+- Shared secret is supplied explicitly at startup and not printed back to stdout.
 
 ## Tracing (Baseline)
 - Each request is traced with: request_id, timing, model_id, chunk_count.

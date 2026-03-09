@@ -8,8 +8,9 @@ This runbook covers the core operational workflows for the local companion servi
 
 1. Run `npm install`.
 2. Run `npm run lint`, `npm run typecheck`, `npm run build`, and `npm test`.
-3. Start the service with `npm run companion`.
-4. Capture the printed secret and provide it only to trusted local clients.
+3. Set a strong shared secret in the environment, for example `SECRET=...`.
+4. Start the service with `npm run companion`.
+5. Configure the same shared credential only in trusted local clients.
 
 ## Health Verification
 
