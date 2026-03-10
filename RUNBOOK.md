@@ -7,10 +7,12 @@ This runbook covers the core operational workflows for the local companion servi
 ## Local Startup
 
 1. Run `npm install`.
-2. Run `npm run lint`, `npm run typecheck`, `npm run build`, and `npm test`.
+2. Run `npm run lint`, `npm run typecheck`, `npm run build`, `npm test`, and `npm run openssf:check`.
 3. Set a strong shared secret in the environment, for example `SECRET=...`.
 4. Start the service with `npm run companion`.
 5. Configure the same shared credential only in trusted local clients.
+
+The service refuses to bind to non-loopback hosts unless `ALLOW_NON_LOOPBACK_HOST=true` is set explicitly.
 
 ## Health Verification
 
@@ -21,6 +23,7 @@ This runbook covers the core operational workflows for the local companion servi
 ## Model Warmup
 
 - `POST /model/warmup` requires `X-Pilma-Secret`.
+- All `POST` routes require `Content-Type: application/json`.
 - If `allowRemoteDownload` is `false`, only pre-cached models can be warmed.
 - If warmup fails, confirm that the requested model exists in config and that cache permissions are valid.
 
@@ -40,6 +43,8 @@ This runbook covers the core operational workflows for the local companion servi
 ## Release Checklist
 
 - All local quality gates pass.
-- Motherlode audit passes.
+- `npm run openssf:check` passes.
+- Motherlode audit passes on the shell used by contributors.
 - `npm audit` reports zero known vulnerabilities.
 - Docs reflect current behavior and scripts.
+- Required GitHub branch protection and review settings are still enabled.

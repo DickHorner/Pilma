@@ -1,4 +1,5 @@
 import http from 'http';
+import crypto from 'crypto';
 import { Vault } from './vault';
 import { Anonymizer } from './anonymizer';
 import { ModelManager } from './model-manager';
@@ -125,9 +126,9 @@ export class CompanionServer {
   private verifyAuth(req: http.IncomingMessage): boolean {
     const secret = req.headers['x-pilma-secret'];
     if (Array.isArray(secret)) {
-      return secret.includes(this.config.secret);
+      return secret.some((value) => this.secretsMatch(value, this.config.secret));
     }
-    return secret === this.config.secret;
+    return typeof secret === 'string' && this.secretsMatch(secret, this.config.secret);
   }
 
   /**
@@ -150,6 +151,12 @@ export class CompanionServer {
     if (!this.verifyAuth(req)) {
       this.drainRequest(req);
       this.writeJson(res, 401, { error: 'Unauthorized' });
+      return;
+    }
+
+    if (!this.hasJsonContentType(req)) {
+      this.drainRequest(req);
+      this.writeJson(res, 415, { error: 'Content-Type must be application/json' });
       return;
     }
 
@@ -186,6 +193,12 @@ export class CompanionServer {
       return;
     }
 
+    if (!this.hasJsonContentType(req)) {
+      this.drainRequest(req);
+      this.writeJson(res, 415, { error: 'Content-Type must be application/json' });
+      return;
+    }
+
     try {
       const { sessionId, text } = await this.readJsonBody(req);
 
@@ -219,6 +232,12 @@ export class CompanionServer {
       return;
     }
 
+    if (!this.hasJsonContentType(req)) {
+      this.drainRequest(req);
+      this.writeJson(res, 415, { error: 'Content-Type must be application/json' });
+      return;
+    }
+
     try {
       const { sessionId } = await this.readJsonBody(req);
 
@@ -244,6 +263,12 @@ export class CompanionServer {
     if (!this.verifyAuth(req)) {
       this.drainRequest(req);
       this.writeJson(res, 401, { error: 'Unauthorized' });
+      return;
+    }
+
+    if (!this.hasJsonContentType(req)) {
+      this.drainRequest(req);
+      this.writeJson(res, 415, { error: 'Content-Type must be application/json' });
       return;
     }
 
@@ -370,6 +395,12 @@ export class CompanionServer {
     );
   }
 
+  private hasJsonContentType(req: http.IncomingMessage): boolean {
+    const contentType = req.headers['content-type'];
+    const normalized = Array.isArray(contentType) ? contentType[0] : contentType;
+    return typeof normalized === 'string' && normalized.toLowerCase().startsWith('application/json');
+  }
+
   private handleRouteError(res: http.ServerResponse, err: unknown): void {
     if (err instanceof HttpError) {
       this.writeJson(res, err.statusCode, { error: err.message });
@@ -390,6 +421,17 @@ export class CompanionServer {
 
   private isNonEmptyString(value: unknown): value is string {
     return typeof value === 'string' && value.trim().length > 0;
+  }
+
+  private secretsMatch(provided: string, expected: string): boolean {
+    const providedBytes = Buffer.from(provided, 'utf8');
+    const expectedBytes = Buffer.from(expected, 'utf8');
+
+    if (providedBytes.length !== expectedBytes.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(providedBytes, expectedBytes);
   }
 
   private getPort(): number {

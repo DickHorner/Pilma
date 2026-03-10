@@ -13,7 +13,11 @@ function Get-JsonFile {
   param([string]$Path)
   if (-not (Test-Path $Path)) { return $null }
   try {
-    return Get-Content -Path $Path -Raw | ConvertFrom-Json -Depth 20
+    $raw = Get-Content -Path $Path -Raw
+    if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey('Depth')) {
+      return $raw | ConvertFrom-Json -Depth 20
+    }
+    return $raw | ConvertFrom-Json
   }
   catch {
     return $null
@@ -52,6 +56,19 @@ function Get-FirstExisting {
     }
   }
   return $null
+}
+
+function Get-OrDefault {
+  param(
+    [AllowNull()][object]$Value,
+    [string]$Default
+  )
+
+  if ($null -eq $Value -or [string]::IsNullOrWhiteSpace([string]$Value)) {
+    return $Default
+  }
+
+  return [string]$Value
 }
 
 $checks = New-Object System.Collections.Generic.List[object]
@@ -97,18 +114,18 @@ $ciPath = Get-FirstExisting $ci.workflow
 $codeqlPath = Get-FirstExisting $ci.sast
 $lockfilePath = Get-FirstExisting $config.paths.dependency_lockfiles
 
-Add-Check -Id 'docs.readme' -Category 'governance' -Passed ($null -ne $readmePath) -Evidence ($readmePath ?? 'missing') -Remediation 'Add or update README.md with setup, usage, and contribution basics.' -Weight (Get-Weight 'docs.readme' 2)
-Add-Check -Id 'docs.contributing' -Category 'governance' -Passed ($null -ne $contribPath) -Evidence ($contribPath ?? 'missing') -Remediation 'Add CONTRIBUTING.md with PR and testing requirements.' -Weight (Get-Weight 'docs.contributing' 2)
-Add-Check -Id 'docs.security' -Category 'security' -Passed ($null -ne $securityPath) -Evidence ($securityPath ?? 'missing') -Remediation 'Add SECURITY.md with private reporting process and response targets.' -Weight (Get-Weight 'docs.security' 3)
-Add-Check -Id 'docs.codeowners' -Category 'governance' -Passed ($null -ne $codeownersPath) -Evidence ($codeownersPath ?? 'missing') -Remediation 'Add .github/CODEOWNERS for ownership clarity.' -Weight (Get-Weight 'docs.codeowners' 2)
-Add-Check -Id 'docs.architecture' -Category 'maintainability' -Passed ($null -ne $archPath) -Evidence ($archPath ?? 'missing') -Remediation 'Add architecture decision records or architecture docs.' -Weight (Get-Weight 'docs.architecture' 2)
-Add-Check -Id 'docs.runbook' -Category 'operations' -Passed ($null -ne $runbookPath) -Evidence ($runbookPath ?? 'missing') -Remediation 'Add operational runbooks for critical workflows.' -Weight (Get-Weight 'docs.runbook' 2)
-Add-Check -Id 'ci.workflow' -Category 'delivery' -Passed ($null -ne $ciPath) -Evidence ($ciPath ?? 'missing') -Remediation 'Add CI workflow to run tests, lint or typecheck, and build.' -Weight (Get-Weight 'ci.workflow' 3)
-Add-Check -Id 'security.sast' -Category 'security' -Passed ($null -ne $codeqlPath) -Evidence ($codeqlPath ?? 'missing') -Remediation 'Enable static analysis workflow, for example CodeQL.' -Weight (Get-Weight 'security.sast' 2)
-Add-Check -Id 'deps.lockfile' -Category 'supply-chain' -Passed ($null -ne $lockfilePath) -Evidence ($lockfilePath ?? 'missing') -Remediation 'Commit a dependency lockfile for reproducibility.' -Weight (Get-Weight 'deps.lockfile' 2)
-Add-Check -Id 'agents.instructions' -Category 'ai-governance' -Passed ($null -ne $agentsPath) -Evidence ($agentsPath ?? 'missing') -Remediation 'Add AGENTS.md or agents.md for agent behavior constraints.' -Weight (Get-Weight 'agents.instructions' 1)
-Add-Check -Id 'motherlode.present' -Category 'ai-governance' -Passed ($null -ne $motherlodePath) -Evidence ($motherlodePath ?? 'missing') -Remediation 'Add .motherlode/MOTHERLODE.md and activation scripts.' -Weight (Get-Weight 'motherlode.present' 2)
-Add-Check -Id 'release.changelog' -Category 'operations' -Passed ($null -ne $changelogPath) -Evidence ($changelogPath ?? 'missing') -Remediation 'Add CHANGELOG.md for release transparency.' -Weight (Get-Weight 'release.changelog' 1)
+Add-Check -Id 'docs.readme' -Category 'governance' -Passed ($null -ne $readmePath) -Evidence (Get-OrDefault $readmePath 'missing') -Remediation 'Add or update README.md with setup, usage, and contribution basics.' -Weight (Get-Weight 'docs.readme' 2)
+Add-Check -Id 'docs.contributing' -Category 'governance' -Passed ($null -ne $contribPath) -Evidence (Get-OrDefault $contribPath 'missing') -Remediation 'Add CONTRIBUTING.md with PR and testing requirements.' -Weight (Get-Weight 'docs.contributing' 2)
+Add-Check -Id 'docs.security' -Category 'security' -Passed ($null -ne $securityPath) -Evidence (Get-OrDefault $securityPath 'missing') -Remediation 'Add SECURITY.md with private reporting process and response targets.' -Weight (Get-Weight 'docs.security' 3)
+Add-Check -Id 'docs.codeowners' -Category 'governance' -Passed ($null -ne $codeownersPath) -Evidence (Get-OrDefault $codeownersPath 'missing') -Remediation 'Add .github/CODEOWNERS for ownership clarity.' -Weight (Get-Weight 'docs.codeowners' 2)
+Add-Check -Id 'docs.architecture' -Category 'maintainability' -Passed ($null -ne $archPath) -Evidence (Get-OrDefault $archPath 'missing') -Remediation 'Add architecture decision records or architecture docs.' -Weight (Get-Weight 'docs.architecture' 2)
+Add-Check -Id 'docs.runbook' -Category 'operations' -Passed ($null -ne $runbookPath) -Evidence (Get-OrDefault $runbookPath 'missing') -Remediation 'Add operational runbooks for critical workflows.' -Weight (Get-Weight 'docs.runbook' 2)
+Add-Check -Id 'ci.workflow' -Category 'delivery' -Passed ($null -ne $ciPath) -Evidence (Get-OrDefault $ciPath 'missing') -Remediation 'Add CI workflow to run tests, lint or typecheck, and build.' -Weight (Get-Weight 'ci.workflow' 3)
+Add-Check -Id 'security.sast' -Category 'security' -Passed ($null -ne $codeqlPath) -Evidence (Get-OrDefault $codeqlPath 'missing') -Remediation 'Enable static analysis workflow, for example CodeQL.' -Weight (Get-Weight 'security.sast' 2)
+Add-Check -Id 'deps.lockfile' -Category 'supply-chain' -Passed ($null -ne $lockfilePath) -Evidence (Get-OrDefault $lockfilePath 'missing') -Remediation 'Commit a dependency lockfile for reproducibility.' -Weight (Get-Weight 'deps.lockfile' 2)
+Add-Check -Id 'agents.instructions' -Category 'ai-governance' -Passed ($null -ne $agentsPath) -Evidence (Get-OrDefault $agentsPath 'missing') -Remediation 'Add AGENTS.md or agents.md for agent behavior constraints.' -Weight (Get-Weight 'agents.instructions' 1)
+Add-Check -Id 'motherlode.present' -Category 'ai-governance' -Passed ($null -ne $motherlodePath) -Evidence (Get-OrDefault $motherlodePath 'missing') -Remediation 'Add .motherlode/MOTHERLODE.md and activation scripts.' -Weight (Get-Weight 'motherlode.present' 2)
+Add-Check -Id 'release.changelog' -Category 'operations' -Passed ($null -ne $changelogPath) -Evidence (Get-OrDefault $changelogPath 'missing') -Remediation 'Add CHANGELOG.md for release transparency.' -Weight (Get-Weight 'release.changelog' 1)
 
 $packageJson = $null
 $scriptNames = @()

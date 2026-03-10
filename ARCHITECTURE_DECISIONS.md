@@ -5,6 +5,7 @@ This file records the repo-level architecture decisions that back the current ba
 ## ADR-0001: Loopback-only companion service
 
 - The service binds to `127.0.0.1` by default.
+- Non-loopback binding requires explicit operator opt-in.
 - Internet-facing deployment is out of scope for this repo slice.
 - All POST routes require a shared secret.
 
@@ -23,6 +24,7 @@ This file records the repo-level architecture decisions that back the current ba
 ## ADR-0004: Auth before body parsing
 
 - The service verifies the shared secret before reading POST bodies.
+- POST routes require `Content-Type: application/json`.
 - Request bodies are capped at 1 MiB to reduce local denial-of-service risk.
 - Invalid JSON returns a `400` instead of a generic `500`.
 

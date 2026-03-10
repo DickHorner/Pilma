@@ -11,7 +11,11 @@ function Get-JsonFile {
   param([string]$Path)
   if (-not (Test-Path $Path)) { return $null }
   try {
-    return Get-Content -Path $Path -Raw | ConvertFrom-Json -Depth 20
+    $raw = Get-Content -Path $Path -Raw
+    if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey('Depth')) {
+      return $raw | ConvertFrom-Json -Depth 20
+    }
+    return $raw | ConvertFrom-Json
   }
   catch {
     return $null

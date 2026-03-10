@@ -140,6 +140,22 @@ describe('CompanionServer', () => {
       expect(body.error).toContain('Invalid JSON');
     });
 
+    it('rejects non-JSON content types', async () => {
+      const response = await makeRawRequest(
+        'POST',
+        '/anonymize',
+        '{"sessionId":"session-1","text":"Email: user@example.com"}',
+        {
+          'X-Pilma-Secret': config.secret,
+          'Content-Type': 'text/plain',
+        }
+      );
+
+      expect(response.status).toBe(415);
+      const body = JSON.parse(response.body);
+      expect(body.error).toContain('application/json');
+    });
+
     it('rejects oversized request bodies', async () => {
       const response = await makeRequest(
         'POST',

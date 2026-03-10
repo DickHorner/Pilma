@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- added OpenSSF readiness evidence, a Scorecard workflow, and a repo-local `openssf:check`
+- pinned GitHub Actions by commit SHA and added Dependabot updates for npm and GitHub Actions
+- tightened startup defaults so non-loopback binds require explicit opt-in
+- enforced `application/json` on all authenticated POST routes
+- replaced placeholder security contacts with honest repository-based reporting guidance
+- added maintainer and conduct docs to strengthen governance evidence
+- removed redundant legacy lint and PR1 testing artifacts
 - hardened request handling by authenticating before body parsing and adding request-size limits
 - required an explicit startup `SECRET` and stopped printing shared credentials at startup
 - made server startup fail fast on bind errors

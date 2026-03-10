@@ -1,7 +1,7 @@
 # Core ownership and bus-factor coverage for critical paths.
-* @jaspe @pilma-maintainers
+* @DickHorner @jaspe
 
-/src/companion/ @jaspe @pilma-maintainers
-/src/tracing/ @jaspe @pilma-maintainers
-/.github/workflows/ @jaspe @pilma-maintainers
-/SECURITY.md @jaspe @pilma-maintainers
+/src/companion/ @DickHorner @jaspe
+/src/tracing/ @DickHorner @jaspe
+/.github/workflows/ @DickHorner @jaspe
+/SECURITY.md @DickHorner @jaspe

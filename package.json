@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
+    "openssf:check": "node scripts/openssf-readiness.cjs",
     "companion": "npm run build && node dist/companion/index.js"
   },
   "devDependencies": {

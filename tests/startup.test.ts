@@ -33,6 +33,29 @@ describe('startup configuration', () => {
     });
   });
 
+  it('rejects non-loopback hosts without an explicit opt-in', () => {
+    expect(() =>
+      resolveStartupConfig({
+        HOST: '0.0.0.0',
+        SECRET: 'test-shared-credential',
+      })
+    ).toThrow('Refusing to bind to non-loopback host');
+  });
+
+  it('accepts non-loopback hosts with an explicit opt-in', () => {
+    expect(
+      resolveStartupConfig({
+        HOST: '0.0.0.0',
+        ALLOW_NON_LOOPBACK_HOST: 'true',
+        SECRET: 'test-shared-credential',
+      })
+    ).toEqual({
+      port: 8787,
+      host: '0.0.0.0',
+      secret: 'test-shared-credential',
+    });
+  });
+
   it('rejects invalid ports', () => {
     expect(() =>
       resolveStartupConfig({
