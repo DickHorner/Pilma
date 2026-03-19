@@ -229,6 +229,7 @@ Pilma haertet nicht nur den Runtime-Pfad, sondern auch die Repo-Pipeline:
 - `npm test`
 - `npm run openssf:check`
 - GitHub Actions fuer CI, CodeQL und OpenSSF Scorecards
+- Dependabot-Patch- und Minor-Updates aktivieren nach gruener CI automatisch `auto-merge`
 
 Das Ziel ist ein Repo, das fuer lokale Privacy-Software nicht nur funktional, sondern auch nachvollziehbar wartbar und reviewbar ist.
 
