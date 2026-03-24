@@ -19,7 +19,7 @@
     "eslint": "10.0.3",
     "eslint-visitor-keys": "4.2.1",
     "prettier": "3.8.1",
-    "typescript": "5.9.3",
+    "typescript": "6.0.2",
     "vitest": "4.1.0"
   }
 }
